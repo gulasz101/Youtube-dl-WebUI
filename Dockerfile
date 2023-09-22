@@ -1,31 +1,33 @@
-FROM debian:wheezy
+FROM ghcr.io/roadrunner-server/roadrunner:2.10.1 AS roadrunner
+FROM composer:latest AS composer
+FROM php:8.2-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends\
-    git python libav-tools apache2 php5 curl ca-certificates
-RUN rm -rf /var/lib/apt/lists/*
+RUN apk add \
+  git \
+  curl 
 
-#Install youtube-dl
-RUN curl https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && chmod a+x /usr/local/bin/youtube-dl
+# ffmpeg \
+# yt-dlp
+#
 
-WORKDIR /
-RUN mkdir /www
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN install-php-extensions \
+  sockets \
+  zip \
+  mbstring
 
-WORKDIR /www
-RUN git clone https://github.com/p1rox/youtube-dl-webui.git youtube-dl
 
-WORKDIR /www/youtube-dl
-RUN rm -rf .git README.md img .gitignore docker
+# RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+# RUN chmod a+rx /usr/local/bin/yt-dlp
 
-WORKDIR /
-RUN chmod -R 755 /www && chown -R www-data:www-data /www
+WORKDIR /app
 
-COPY ./docker/vhost.conf /etc/apache2/conf.d/extra/vhost.conf
+RUN addgroup -g "1000" -S php \
+  && adduser --system --gecos "" --ingroup "php" --uid "1000" php \
+  && mkdir /var/run/rr \
+  && chown php /var/run/rr
 
-RUN ln -sf /dev/stdout /var/log/apache2/youtube-dl_access.log
-RUN ln -sf /dev/stderr /var/log/apache2/youtube-dl_error.log
+COPY --from=roadrunner /usr/bin/rr /usr/local/bin/rr
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-EXPOSE 80
-
-VOLUME /www/youtube-dl/downloads
-
-CMD youtube-dl -U && /usr/sbin/apache2ctl -D FOREGROUND
+CMD ["rr", "serve"]
