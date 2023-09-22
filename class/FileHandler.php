@@ -1,238 +1,226 @@
 <?php
 
+namespace App\Utils;
+
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use Throwable;
+
 class FileHandler
 {
-	private $config = [];
-	private $re_partial = '/(?:\.part(?:-Frag\d+)?|\.ytdl)$/m';
+  private array $config = [];
+  private string $re_partial = '/(?:\.part(?:-Frag\d+)?|\.ytdl)$/m';
 
-	public function __construct()
-	{
-		$this->config = require dirname(__DIR__).'/config/config.php';
-	}
+  public function __construct()
+  {
+    $this->config = require dirname(__DIR__) . '/config/config.php';
+  }
 
-	public function listFiles()
-	{
-		$files = [];
+  public function listFiles(): array
+  {
+    $files = [];
 
-		if(!$this->outuput_folder_exists())
-			return;
+    if (!$this->outuput_folder_exists())
+      return;
 
-		$folder = $this->get_downloads_folder().'/';
+    $folder = $this->get_downloads_folder() . '/';
 
-		foreach(glob($folder.'*.*', GLOB_BRACE) as $file)
-		{
-			$content = [];
-			$content["name"] = str_replace($folder, "", $file);
-			$content["size"] = $this->to_human_filesize(filesize($file));
-			
-			if (preg_match($this->re_partial, $content["name"]) === 0) {
-				$files[] = $content;
-			}
-			
-		}
+    foreach (glob($folder . '*.*') as $file) {
+      $content = [];
+      $content["name"] = str_replace($folder, "", $file);
+      $content["size"] = $this->to_human_filesize(filesize($file));
 
-		return $files;
-	}
+      if (preg_match($this->re_partial, $content["name"]) === 0) {
+        $files[] = $content;
+      }
+    }
 
-	public function listParts()
-	{
-		$files = [];
+    return $files;
+  }
 
-		if(!$this->outuput_folder_exists())
-			return;
+  public function listParts(): array
+  {
+    $files = [];
 
-		$folder = $this->get_downloads_folder().'/';
+    if (!$this->outuput_folder_exists())
+      return;
 
-		foreach(glob($folder.'*.*', GLOB_BRACE) as $file)
-		{
-			$content = [];
-			$content["name"] = str_replace($folder, "", $file);
-			$content["size"] = $this->to_human_filesize(filesize($file));
-			
-			if (preg_match($this->re_partial, $content["name"]) !== 0) {
-				$files[] = $content;
-			}
-			
-		}
+    $folder = $this->get_downloads_folder() . '/';
 
-		return $files;
-	}
-	
-	public function is_log_enabled()
-	{
-		return !!($this->config["log"]);
-	}
-	
-	public function countLogs()
-	{
-		if(!$this->config["log"])
-			return;
+    foreach (glob($folder . '*.*') as $file) {
+      $content = [];
+      $content["name"] = str_replace($folder, "", $file);
+      $content["size"] = $this->to_human_filesize(filesize($file));
 
-		if(!$this->logs_folder_exists())
-			return;
+      if (preg_match($this->re_partial, $content["name"]) !== 0) {
+        $files[] = $content;
+      }
+    }
 
-		$folder = $this->get_logs_folder().'/';
-		return count(glob($folder.'*.txt', GLOB_BRACE));
-	}
+    return $files;
+  }
 
-	public function listLogs()
-	{
-		$files = [];
-		
-		if(!$this->config["log"])
-			return;
+  public function is_log_enabled(): bool
+  {
+    return !!($this->config["log"]);
+  }
 
-		if(!$this->logs_folder_exists())
-			return;
+  public function countLogs(): int
+  {
+    if (!$this->config["log"])
+      return;
 
-		$folder = $this->get_logs_folder().'/';
+    if (!$this->logs_folder_exists())
+      return;
 
-		foreach(glob($folder.'*.txt', GLOB_BRACE) as $file)
-		{
-			$content = [];
-			$content["name"] = str_replace($folder, "", $file);
-			$content["size"] = $this->to_human_filesize(filesize($file));
+    $folder = $this->get_logs_folder() . '/';
+    return count(glob($folder . '*.txt'));
+  }
 
-			try {
-				$lines = explode("\r", file_get_contents($file));
-				$content["lastline"] = array_slice($lines, -1)[0];
-				$content["100"] = strpos($lines[count($lines)-1], ' 100% of ') > 0;
-			} catch (Exception $e) {
-				$content["lastline"] = '';
-				$content["100"] = False;
-			}	
-			try {
-				$handle = fopen($file, 'r');
-				fseek($handle, filesize($file) - 1);
-				$lastc = fgets($handle);
-				fclose($handle);
-				$content["ended"] = ($lastc === "\n");
-			} catch (Exception $e) {
-				$content["ended"] = False;
-			}
+  public function listLogs(): array
+  {
+    $files = [];
+
+    if (!$this->config["log"])
+      return;
+
+    if (!$this->logs_folder_exists())
+      return;
+
+    $folder = $this->get_logs_folder() . '/';
+
+    foreach (glob($folder . '*.txt') as $file) {
+      $content = [];
+      $content["name"] = str_replace($folder, "", $file);
+      $content["size"] = $this->to_human_filesize(filesize($file));
+
+      try {
+        $lines = explode("\r", file_get_contents($file));
+        $content["lastline"] = array_slice($lines, -1)[0];
+        $content["100"] = strpos($lines[count($lines) - 1], ' 100% of ') > 0;
+      } catch (Throwable $e) {
+        $content["lastline"] = '';
+        $content["100"] = False;
+      }
+      try {
+        $handle = fopen($file, 'r');
+        fseek($handle, filesize($file) - 1);
+        $lastc = fgets($handle);
+        fclose($handle);
+        $content["ended"] = ($lastc === "\n");
+      } catch (Throwable $e) {
+        $content["ended"] = False;
+      }
 
 
-			$files[] = $content;
-		}
+      $files[] = $content;
+    }
 
-		return $files;
-	}
+    return $files;
+  }
 
-	public function delete($id)
-	{
-		$folder = $this->get_downloads_folder().'/';
+  public function delete(string $id): void
+  {
+    $folder = $this->get_downloads_folder() . '/';
 
-		foreach(glob($folder.'*.*', GLOB_BRACE) as $file)
-		{
-			if(sha1(str_replace($folder, "", $file)) == $id)
-			{
-				unlink($file);
-			}
-		}
-	}
+    foreach (glob($folder . '*.*') as $file) {
+      if (sha1(str_replace($folder, "", $file)) == $id) {
+        unlink($file);
+      }
+    }
+  }
 
-	public function deleteLog($id)
-	{
-		$folder = $this->get_logs_folder().'/';
+  public function deleteLog(string $id): void
+  {
+    $folder = $this->get_logs_folder() . '/';
 
-		foreach(glob($folder.'*.txt', GLOB_BRACE) as $file)
-		{
-			if(sha1(str_replace($folder, "", $file)) == $id)
-			{
-				unlink($file);
-			}
-		}
-	}
+    foreach (glob($folder . '*.txt') as $file) {
+      if (sha1(str_replace($folder, "", $file)) == $id) {
+        unlink($file);
+      }
+    }
+  }
 
-	private function outuput_folder_exists()
-	{
-		if(!is_dir($this->get_downloads_folder()))
-		{
-			//Folder doesn't exist
-			if(!mkdir($this->get_downloads_folder(),0777))
-			{
-				return false; //No folder and creation failed
-			}
-		}
-		
-		return true;
-	}
+  private function outuput_folder_exists(): bool
+  {
+    if (!is_dir($this->get_downloads_folder())) {
+      //Folder doesn't exist
+      if (!mkdir($this->get_downloads_folder(), 0777)) {
+        return false; //No folder and creation failed
+      }
+    }
 
-	public function to_human_filesize($bytes, $decimals = 1)
-	{
-		$sz = 'BKMGTP';
-		$factor = floor((strlen($bytes) - 1) / 3);
-		return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$sz[$factor];
-	}
+    return true;
+  }
 
-	public function free_space()
-	{
-		return $this->to_human_filesize(disk_free_space(realpath($this->get_downloads_folder())));
-	}
+  public function to_human_filesize($bytes, $decimals = 1)
+  {
+    $sz = 'BKMGTP';
+    $factor = floor((strlen($bytes) - 1) / 3);
+    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$sz[$factor];
+  }
 
-	public function used_space()
-	{
-		$path = realpath($this->get_downloads_folder());
-		$bytestotal = 0;
-		foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)) as $object){
-			$bytestotal += $object->getSize();
-		}
-		return $this->to_human_filesize($bytestotal);
-	}
+  public function free_space()
+  {
+    return $this->to_human_filesize(disk_free_space(realpath($this->get_downloads_folder())));
+  }
 
-	public function get_downloads_folder()
-	{
-		$path =  $this->config["outputFolder"];
-		if(strpos($path , "/") !== 0)
-		{
-				$path = dirname(__DIR__).'/' . $path;
-		}
-		return $path;
-	}
+  public function used_space()
+  {
+    $path = realpath($this->get_downloads_folder());
+    $bytestotal = 0;
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)) as $object) {
+      $bytestotal += $object->getSize();
+    }
+    return $this->to_human_filesize($bytestotal);
+  }
 
-	public function get_logs_folder()
-	{
-		$path =  $this->config["logFolder"];
-		if(strpos($path , "/") !== 0)
-		{
-				$path = dirname(__DIR__).'/' . $path;
-		}
-		return $path;
-	}
+  public function get_downloads_folder()
+  {
+    $path =  $this->config["outputFolder"];
+    if (strpos($path, "/") !== 0) {
+      $path = dirname(__DIR__) . '/' . $path;
+    }
+    return $path;
+  }
 
-	public function get_relative_downloads_folder()
-	{
-		$path =  $this->config["outputFolder"];
-		if(strpos($path , "/") !== 0)
-		{
-				return $this->config["outputFolder"];
-		}
-		return false;
-	}
+  public function get_logs_folder()
+  {
+    $path =  $this->config["logFolder"];
+    if (strpos($path, "/") !== 0) {
+      $path = dirname(__DIR__) . '/' . $path;
+    }
+    return $path;
+  }
 
-	public function get_relative_log_folder()
-	{
-		$path =  $this->config["logFolder"];
-		if(strpos($path , "/") !== 0)
-		{
-				return $this->config["logFolder"];;
-		}
-		return false;
-	}
+  public function get_relative_downloads_folder()
+  {
+    $path =  $this->config["outputFolder"];
+    if (strpos($path, "/") !== 0) {
+      return $this->config["outputFolder"];
+    }
+    return false;
+  }
 
-	private function logs_folder_exists()
-	{
-		if(!is_dir($this->get_logs_folder()))
-		{
-			//Folder doesn't exist
-			if(!mkdir($this->get_logs_folder(),0777))
-			{
-				return false; //No folder and creation failed
-			}
-		}
-		
-		return true;
-	}
+  public function get_relative_log_folder()
+  {
+    $path =  $this->config["logFolder"];
+    if (strpos($path, "/") !== 0) {
+      return $this->config["logFolder"];;
+    }
+    return false;
+  }
+
+  private function logs_folder_exists()
+  {
+    if (!is_dir($this->get_logs_folder())) {
+      //Folder doesn't exist
+      if (!mkdir($this->get_logs_folder(), 0777)) {
+        return false; //No folder and creation failed
+      }
+    }
+
+    return true;
+  }
 }
-
-?>
