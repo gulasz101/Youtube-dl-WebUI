@@ -6,9 +6,12 @@ use App\Utils\Downloader;
 use App\Utils\FileHandler;
 use App\Utils\Session;
 use Nyholm\Psr7\Response;
+use Psr\Http\Message\ServerRequestInterface;
+
+use function StrictHelpers\ob_get_contents;
 
 $session = Session::getInstance();
-$file = new FileHandler;
+$file = new FileHandler();
 /**
  * @var ServerRequestInterface $request
  */
@@ -17,14 +20,14 @@ ob_start();
 require 'views/header.php';
 
 if ($session->is_logged_in() !== true) {
-  return new Response(302, ['Location' => 'login.php']);
+    return new Response(302, ['Location' => 'login.php']);
 } else {
-  $json = False;
+    $json = false;
 
-  if (isset($_POST['urls']) && !empty($_POST['urls'])) {
-    $downloader = new Downloader($_POST['urls']);
-    $json = $downloader->info();
-  }
+    if (isset($_POST['urls']) && !empty($_POST['urls'])) {
+        $downloader = new Downloader($_POST['urls']);
+        $json = $downloader->info();
+    }
 }
 ?>
 <div class="container my-4">
@@ -32,12 +35,12 @@ if ($session->is_logged_in() !== true) {
   <?php
 
   if (isset($_SESSION['errors']) && $_SESSION['errors'] > 0) {
-    foreach ($_SESSION['errors'] as $e) {
-      echo "<div class=\"alert alert-warning\" role=\"alert\">$e</div>";
-    }
+      foreach ($_SESSION['errors'] as $e) {
+          echo "<div class=\"alert alert-warning\" role=\"alert\">$e</div>";
+      }
   }
 
-  ?>
+?>
   <form id="info-form" action="info.php" method="post">
     <div class="row my-3">
       <div class="input-group">
@@ -55,8 +58,8 @@ if ($session->is_logged_in() !== true) {
   <br>
   <div class="row">
     <?php
-    if ($json) {
-    ?>
+  if ($json) {
+      ?>
       <div class="panel panel-info">
         <div class="panel-heading">
           <h3 class="panel-title">Info</h3>
@@ -66,8 +69,8 @@ if ($session->is_logged_in() !== true) {
         </div>
       </div>
     <?php
-    }
-    ?>
+  }
+?>
   </div>
 </div>
 <?php

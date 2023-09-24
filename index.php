@@ -1,43 +1,47 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Utils\Downloader;
 use App\Utils\FileHandler;
 use App\Utils\Session;
 use Nyholm\Psr7\Response;
 
+use function StrictHelpers\ob_get_contents;
+
 $session = Session::getInstance();
-$file = new FileHandler;
+$file = new FileHandler();
 
 if (!$session->is_logged_in()) {
-  return new Response(302, ['Location' => 'login.php']);
+    return new Response(302, ['Location' => 'login.php']);
 } else {
-  if (isset($_GET['kill']) && !empty($_GET['kill']) && $_GET['kill'] === "all") {
-    Downloader::kill_them_all();
-  }
-
-  if (isset($_POST['urls']) && !empty($_POST['urls'])) {
-    $audio_only = false;
-    if (isset($_POST['audio']) && !empty($_POST['audio'])) {
-      $audio_only = true;
+    if (isset($_GET['kill']) && !empty($_GET['kill']) && $_GET['kill'] === "all") {
+        Downloader::kill_them_all();
     }
 
-    $outfilename = False;
-    if (isset($_POST['outfilename']) && !empty($_POST['outfilename'])) {
-      $outfilename = $_POST['outfilename'];
-    }
+    if (isset($_POST['urls']) && !empty($_POST['urls'])) {
+        $audio_only = false;
+        if (isset($_POST['audio']) && !empty($_POST['audio'])) {
+            $audio_only = true;
+        }
 
-    $vformat = False;
-    if (isset($_POST['vformat']) && !empty($_POST['vformat'])) {
-      $vformat = $_POST['vformat'];
-    }
+        $outfilename = false;
+        if (isset($_POST['outfilename']) && !empty($_POST['outfilename'])) {
+            $outfilename = $_POST['outfilename'];
+        }
 
-    $downloader = new Downloader($_POST['urls']);
-    $downloader->download($audio_only, $outfilename, $vformat);
+        $vformat = false;
+        if (isset($_POST['vformat']) && !empty($_POST['vformat'])) {
+            $vformat = $_POST['vformat'];
+        }
 
-    if (!isset($_SESSION['errors'])) {
-      return new Response(302, ['Location' => 'index.php']);
+        $downloader = new Downloader($_POST['urls']);
+        $downloader->download($audio_only, $outfilename, $vformat);
+
+        if (!isset($_SESSION['errors'])) {
+            return new Response(302, ['Location' => 'index.php']);
+        }
     }
-  }
 }
 ob_start();
 
@@ -48,12 +52,12 @@ require 'views/header.php';
   <?php
 
   if (isset($_SESSION['errors']) && $_SESSION['errors'] > 0) {
-    foreach ($_SESSION['errors'] as $e) {
-      echo "<div class=\"alert alert-warning\" role=\"alert\">$e</div>";
-    }
+      foreach ($_SESSION['errors'] as $e) {
+          echo "<div class=\"alert alert-warning\" role=\"alert\">$e</div>";
+      }
   }
 
-  ?>
+?>
   <form id="download-form" action="index.php" method="post">
     <div class="row my-3">
       <div class="input-group">

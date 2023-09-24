@@ -4,3 +4,4 @@ logs
 config/config.php
 
 vendor
+.php-cs-fixer.cache

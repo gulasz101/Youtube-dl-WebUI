@@ -4,6 +4,8 @@ use App\Utils\Session;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function StrictHelpers\ob_get_contents;
+
 $session = Session::getInstance();
 $loginError = "";
 
@@ -13,12 +15,12 @@ $loginError = "";
 
 
 if ($request->getMethod() === 'POST') {
-  if ($session->login($request->getParsedBody()['password'] ?? null)) {
+    if ($session->login($request->getParsedBody()['password'] ?? null)) {
 
-    return new Response(302, ['Location' => 'index.php']);
-  }
+        return new Response(302, ['Location' => 'index.php']);
+    }
 
-  $loginError = "Wrong password !";
+    $loginError = "Wrong password !";
 }
 
 
@@ -31,11 +33,11 @@ require 'views/header.php';
 <div class="container my-4">
   <?php
   if ($loginError !== "") {
-  ?>
+      ?>
     <div class="alert alert-danger" role="alert"><?php echo $loginError; ?></div>
   <?php
   }
-  ?>
+?>
   <form class="form-horizontal" action="/login.php" method="POST" data-bitwarden-watching="1">
     <div class="row my-3 justify-content-md-center">
       <div class="col col-md-4">

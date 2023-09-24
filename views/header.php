@@ -21,9 +21,12 @@
           <?php
 
           use App\Utils\Downloader;
+          use App\Utils\Session;
 
+          /** @var Session $session */
+          // $session-is always set
           if ($session->is_logged_in() && isset($file)) {
-          ?>
+              ?>
             <li class="nav-item mx-1"><a class="nav-link" href="./">
                 <span class="align-text-bottom"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-download-fill" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M8 0a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 4.095 0 5.555 0 7.318 0 9.366 1.708 11 3.781 11H7.5V5.5a.5.5 0 0 1 1 0V11h4.188C14.502 11 16 9.57 16 7.773c0-1.636-1.242-2.969-2.834-3.194C12.923 1.999 10.69 0 8 0zm-.354 15.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 14.293V11h-1v3.293l-2.146-2.147a.5.5 0 0 0-.708.708l3 3z" />
@@ -40,56 +43,60 @@
                     <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
                   </svg></span>
                 <?php
-                // List of files
-                $filesCount = count($file->listFiles());
-                if ($filesCount < 1) {
+                    // List of files
+                    $filesCount = count($file->listFiles());
+              if ($filesCount < 1) {
                   echo '							List of files';
-                } else {
+              } else {
                   echo '							<b>List of files</b> (' . ($filesCount) . ')';
-                }
-                unset($filesCount);
-                ?>
+              }
+              unset($filesCount);
+              ?>
               </a></li>
             <?php
             // Logs
             if ($file->is_log_enabled()) {
-            ?>
+                ?>
               <li class="nav-item mx-1"><a class="nav-link" href="/logs.php">
                   <span class="align-text-bottom"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-journals" viewBox="0 0 16 16">
                       <path d="M5 0h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2 2 2 0 0 1-2 2H3a2 2 0 0 1-2-2h1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1H1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1H3a2 2 0 0 1 2-2z" />
                       <path d="M1 6v-.5a.5.5 0 0 1 1 0V6h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 3v-.5a.5.5 0 0 1 1 0V9h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 2.5v.5H.5a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1H2v-.5a.5.5 0 0 0-1 0z" />
                     </svg></span>
                   <?php
-                  $filesCount = $file->countLogs();
-                  if ($filesCount < 1) {
+                      $filesCount = $file->countLogs();
+                if ($filesCount < 1) {
                     echo '						Logs';
-                  } else {
+                } else {
                     echo '						<b>Logs</b> (' . ($filesCount) . ')';
-                  }
-                  unset($filesCount);
-                  ?>
+                }
+                unset($filesCount);
+                ?>
                 </a></li>
             <?php
             }
-            ?>
+              ?>
             <li class="nav-item mx-1 dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <?php if (Downloader::background_jobs() > 0) echo "<b>"; ?>Background downloads : <?php echo Downloader::background_jobs() . " / " . Downloader::max_background_jobs();
-                                                                                                  if (Downloader::background_jobs() > 0) echo "</b>"; ?> <span class="caret"></span></a>
+                <?php if (Downloader::background_jobs() > 0) {
+                    echo "<b>";
+                } ?>Background downloads : <?php echo Downloader::background_jobs() . " / " . Downloader::max_background_jobs();
+              if (Downloader::background_jobs() > 0) {
+                  echo "</b>";
+              } ?> <span class="caret"></span></a>
               <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                 <?php
                 if (Downloader::get_current_background_jobs() != null) {
-                  foreach (Downloader::get_current_background_jobs() as $key) {
-                    echo "									<li><span class=\"dropdown-item\" title=\"" . htmlspecialchars($key['cmd']) . "\">Elapsed time : " . $key['time'] . "</span></li>";
-                  }
+                    foreach (Downloader::get_current_background_jobs() as $key) {
+                        echo "									<li><span class=\"dropdown-item\" title=\"" . htmlspecialchars($key['cmd']) . "\">Elapsed time : " . $key['time'] . "</span></li>";
+                    }
 
-                  echo "									<li><hr class=\"dropdown-divider\"></li>";
-                  echo "									<li><a class=\"dropdown-item\" href=\"./index.php?kill=all\">Kill all downloads</a></li>";
+                    echo "									<li><hr class=\"dropdown-divider\"></li>";
+                    echo "									<li><a class=\"dropdown-item\" href=\"./index.php?kill=all\">Kill all downloads</a></li>";
                 } else {
-                  echo "									<li><a class=\"dropdown-item disabled\">No jobs !</a></li>";
+                    echo "									<li><a class=\"dropdown-item disabled\">No jobs !</a></li>";
                 }
 
-                ?>
+              ?>
               </ul>
             </li>
           <?php
@@ -100,7 +107,7 @@
       <ul class="navbar-nav mr-auto justify-content-end">
         <?php
         if ($session->is_logged_in()) {
-        ?>
+            ?>
           <li class="nav-item"><a class="nav-link" href="./logout.php">
               <span class="align-text-bottom"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                   <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
@@ -110,7 +117,7 @@
             </a></li>
         <?php
         }
-        ?>
+          ?>
       </ul>
     </div>
   </nav>
