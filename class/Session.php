@@ -11,7 +11,7 @@ class Session
      */
     private array $config = [];
 
-    private static self|null $_instance;
+    private static self|null $_instance = null;
 
     public function __construct()
     {

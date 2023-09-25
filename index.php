@@ -6,36 +6,42 @@ use App\Utils\Downloader;
 use App\Utils\FileHandler;
 use App\Utils\Session;
 use Nyholm\Psr7\Response;
+use Psr\Http\Message\ServerRequestInterface;
 
 use function StrictHelpers\ob_get_contents;
 
 $session = Session::getInstance();
 $file = new FileHandler();
 
+/** @var ServerRequestInterface $request */
+
+$postInput = $request->getParsedBody();
+$queryParams = $request->getQueryParams();
+
 if (!$session->is_logged_in()) {
     return new Response(302, ['Location' => 'login.php']);
 } else {
-    if (isset($_GET['kill']) && !empty($_GET['kill']) && $_GET['kill'] === "all") {
+    if (isset($queryParams['kill']) && !empty($queryParams['kill']) && $queryParams['kill'] === "all") {
         Downloader::kill_them_all();
     }
 
-    if (isset($_POST['urls']) && !empty($_POST['urls'])) {
+    if (isset($postInput['urls']) && !empty($postInput['urls'])) {
         $audio_only = false;
-        if (isset($_POST['audio']) && !empty($_POST['audio'])) {
+        if (isset($postInput['audio']) && !empty($postInput['audio'])) {
             $audio_only = true;
         }
 
         $outfilename = false;
-        if (isset($_POST['outfilename']) && !empty($_POST['outfilename'])) {
-            $outfilename = $_POST['outfilename'];
+        if (isset($postInput['outfilename']) && !empty($postInput['outfilename'])) {
+            $outfilename = $postInput['outfilename'];
         }
 
-        $vformat = false;
-        if (isset($_POST['vformat']) && !empty($_POST['vformat'])) {
-            $vformat = $_POST['vformat'];
+        $vformat = null;
+        if (isset($postInput['vformat']) && !empty($postInput['vformat'])) {
+            $vformat = $postInput['vformat'];
         }
 
-        $downloader = new Downloader($_POST['urls']);
+        $downloader = new Downloader($postInput['urls']);
         $downloader->download($audio_only, $outfilename, $vformat);
 
         if (!isset($_SESSION['errors'])) {
@@ -44,7 +50,6 @@ if (!$session->is_logged_in()) {
     }
 }
 ob_start();
-
 require 'views/header.php';
 ?>
 <div class="container my-4">

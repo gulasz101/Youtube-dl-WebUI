@@ -115,30 +115,13 @@ class Downloader
     public static function get_current_background_jobs(): array
     {
         $config = require dirname(__DIR__) . '/config/config.php';
-        /* exec("ps -A -o user,pid,etime,cmd | grep -v grep | grep -v \"" . $config["bin"] . " -U\" | grep \"" . $config["bin"] . " \"", $output); */
-        $process = new Process(
-            [
-            "ps",
-            "-A",
-            "-o",
-            "user,pid,etime,cmd",
-            "|",
-            "grep",
-            "-v",
-            "grep",
-            "|",
-            "grep",
-            "-v",
-            $config["bin"],
-            "-U",
-            "|",
-            "grep",
-            $config["bin"],
-      ]
-        );
-
+        $process = new Process([              "ps",              "-A",    "-o","user,pid,etime,comm",]);
         $process->mustRun();
+
         $output = explode(PHP_EOL, $process->getOutput());
+        $downloaderRealName = explode('/', $config['bin']);
+        $downloaderRealName = end($downloaderRealName);
+        $output = array_filter($output, fn (string $line): bool => str_contains($line, $downloaderRealName));
 
         $bjs = [];
 
@@ -178,7 +161,7 @@ class Downloader
 
     private function check_requirements(bool $audio_only = false): bool
     {
-        if ($this->is_youtubedl_installed() != 0) {
+        if ($this->is_youtubedl_installed() != true) {
             $this->errors[] = "Binary not found in <code>" . $this->config["bin"] . "</code>, see <a href='https://github.com/yt-dlp/yt-dlp'>yt-dlp site</a> !";
         }
 
@@ -200,8 +183,9 @@ class Downloader
 
     private function is_youtubedl_installed(): bool
     {
-        exec("which " . $this->config["bin"], $out, $r);
-        return $r === 0;
+        (new Process([$this->config['bin'], '--version']))->mustRun();
+
+        return true;
     }
 
     public static function get_youtubedl_version(): string
@@ -214,11 +198,6 @@ class Downloader
     private function is_extracter_installed(): bool
     {
         return (new Process(['which', $this->config['extracter']]))->run() === 0;
-    }
-
-    private function is_python_installed(): bool
-    {
-        return (new Process(['which', 'python']))->run() === 0;
     }
 
     private function is_valid_url(string $url): mixed
@@ -258,61 +237,50 @@ class Downloader
 
     private function do_download(bool $audio_only): void
     {
-        $cmd = $this->config["bin"];
-        $cmd .= " --ignore-error -o " . $this->download_path . "/";
-        $cmd .= escapeshellarg($this->outfilename);
+        $args = [
+          $this->config['bin'],
+          '--restrict-filenames',
+          '--ignore-error',
+          '-o',
+          $this->download_path . '/'.
+          $this->outfilename,
+        ];
 
         if ($this->vformat) {
-            $cmd .= " --format ";
-            $cmd .= escapeshellarg($this->vformat);
+            $args[] = '--format';
+            $args[] = $this->vformat;
         }
         if ($audio_only) {
-            $cmd .= " -x ";
+            $args[] = '-x';
         }
-        $cmd .= " --restrict-filenames"; // --restrict-filenames is for specials chars
         foreach ($this->urls as $url) {
-            $cmd .= " " . escapeshellarg($url);
+            $args[] = $url;
         }
+
+        $process = (new Process($args));
         if ($this->config["log"]) {
-            $cmd = "{ echo Command: " . escapeshellarg($cmd) . "; " . $cmd . " ; }";
-            $cmd .= " > " . $this->log_path . "/$(date  +\"%Y-%m-%d_%H-%M-%S-%N\").txt";
+            $logFilePath = $this->log_path . '/' . date('Y-m-d_H-i-s') . '.txt';
+            file_put_contents($logFilePath, implode(' ', $args), FILE_APPEND);
+            $process->run(fn ($type, $buffer) => file_put_contents($logFilePath, $buffer, FILE_APPEND));
         } else {
-            $cmd .= " > /dev/null ";
+            $process->start();
         }
-
-        $cmd .= " & echo $!";
-
-        shell_exec($cmd);
     }
 
     private function do_info(): string
     {
-        $cmdArgs = [
-            $this->config['bin'],
+        $cmd = new Process([
+              $this->config['bin'],
             '-J',
             ...$this->urls,
-        ];
-
-        if ($this->is_python_installed() == true) {
-            $cmdArgs = array_merge(
-                $cmdArgs,
-                [
-                '|',
-                'python',
-                '-m',
-                'json.tool',
-          ]
-            );
-        }
-
-        $cmd = new Process($cmdArgs);
+        ]);
         $cmd->mustRun();
 
-        $output = $cmd->getOutput();
+        $output = json_decode($cmd->getOutput());
 
         if (!$output) {
             $this->errors[] = "No video found";
         }
-        return $output;
+        return json_encode(value: $output, flags: JSON_PRETTY_PRINT);
     }
 }

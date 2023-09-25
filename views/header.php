@@ -85,7 +85,7 @@
               } ?> <span class="caret"></span></a>
               <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                 <?php
-                if (Downloader::get_current_background_jobs() != null) {
+                if (count(Downloader::get_current_background_jobs())) {
                     foreach (Downloader::get_current_background_jobs() as $key) {
                         echo "									<li><span class=\"dropdown-item\" title=\"" . htmlspecialchars($key['cmd']) . "\">Elapsed time : " . $key['time'] . "</span></li>";
                     }

@@ -16,6 +16,8 @@ $file = new FileHandler();
  * @var ServerRequestInterface $request
  */
 
+$postInput = $request->getParsedBody();
+
 ob_start();
 require 'views/header.php';
 
@@ -24,8 +26,8 @@ if ($session->is_logged_in() !== true) {
 } else {
     $json = false;
 
-    if (isset($_POST['urls']) && !empty($_POST['urls'])) {
-        $downloader = new Downloader($_POST['urls']);
+    if (isset($postInput['urls']) && !empty($postInput['urls'])) {
+        $downloader = new Downloader($postInput['urls']);
         $json = $downloader->info();
     }
 }
