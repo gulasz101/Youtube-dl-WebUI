@@ -1,7 +1,7 @@
 # Youtube-dl WebUI
 
-![Main](/Youtube-dl-WebUI/img/main.png?raw=true)
-![List](/Youtube-dl-WebUI/img/list.png?raw=true)
+![Main](/img/main.png?raw=true)
+![List](/img/list.png?raw=true)
 
 ## Description
 Youtube-dl WebUI is a small web interface for youtube-dl/yt-dlp. It allows you to host your own video downloader. 
