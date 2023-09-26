@@ -2,6 +2,11 @@ FROM ghcr.io/roadrunner-server/roadrunner:2.10.1 AS roadrunner
 FROM composer:latest AS composer
 FROM php:8.2-alpine
 
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+COPY --from=roadrunner /usr/bin/rr /usr/local/bin/rr
+COPY --from=composer /usr/bin/composer /usr/bin/composer
+
 RUN apk add \
   git \
   curl \
@@ -14,18 +19,19 @@ RUN install-php-extensions \
   zip \
   mbstring
 
-
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
 RUN chmod a+rx /usr/local/bin/yt-dlp
 
 WORKDIR /app
+
+RUN git clone https://github.com/gulasz101/Youtube-dl-WebUI.git .
+RUN composer install
 
 RUN addgroup -g "1000" -S php \
   && adduser --system --gecos "" --ingroup "php" --uid "1000" php \
   && mkdir /var/run/rr \
   && chown php /var/run/rr
 
-COPY --from=roadrunner /usr/bin/rr /usr/local/bin/rr
-COPY --from=composer /usr/bin/composer /usr/bin/composer
+EXPOSE 8080
 
 CMD ["rr", "serve"]
