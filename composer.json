@@ -1,0 +1,18 @@
+{
+  "require": {
+    "spiral/roadrunner-http": "^3.1",
+    "nyholm/psr7": "^1.8",
+    "symfony/process": "^6.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\Utils\\": "class/"
+    },
+    "files": [
+      "./strict_helpers/functions.php"
+    ]
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^1.10"
+  }
+}
