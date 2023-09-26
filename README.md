@@ -44,7 +44,7 @@ docker run --rm -d -p '8080:8080' Youtube-dl-WebUI
 - go inside, `cd Youtube-dl-WebUI`
 - execute `composer install`
 - execute `rr serve`
-- 
+- visit [localhost]( http://localhost:8080 )
 
 ## Library
 
