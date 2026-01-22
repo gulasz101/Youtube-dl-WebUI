@@ -34,13 +34,9 @@ It supports:
 
 ## How to install ?
 ### Recommended way:
-I do recommend simply to use docker:
-- clone repo
-- run following commands
+I recommend using the pre-built Docker image from GitHub Container Registry:
 ```
-cd Youtube-dl-WebUI
-docker build -t Youtube-dl-WebUI -f Standalone.Dockerfile .
-docker run --rm -d -p '8080:8080' Youtube-dl-WebUI
+docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:v0.2.0
 ```
 - visit [localhost]( http://localhost:8080 )
 
