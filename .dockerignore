@@ -1,0 +1,34 @@
+# Git files
+.git
+.github
+.gitignore
+
+# Claude Code
+.claude
+
+# PHP dependencies (will be installed in container)
+vendor
+
+# Downloaded files and logs
+downloads/*
+logs/*
+
+# Documentation
+*.md
+README.md
+SESSION_LOG.md
+
+# Development files
+phpstan.neon
+Standalone.Dockerfile
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
