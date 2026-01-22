@@ -1,6 +1,6 @@
-FROM ghcr.io/roadrunner-server/roadrunner:2.10.1 AS roadrunner
+FROM ghcr.io/roadrunner-server/roadrunner:latest AS roadrunner
 FROM composer:latest AS composer
-FROM php:8.2-alpine
+FROM php:8.3-alpine
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
 

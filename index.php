@@ -66,29 +66,27 @@ require 'views/header.php';
   <form id="download-form" action="index.php" method="post">
     <div class="row my-3">
       <div class="input-group">
-        <div class="input-group-text" id="urls-addon">URLs:</div>
+        <span class="input-group-text" id="urls-addon">URLs:</span>
         <input class="form-control" id="url" name="urls" placeholder="Link(s) separated by a space" type="text" aria-describedby="urls-addon" required />
       </div>
     </div>
     <div class="row mt-3 align-items-center">
-      <div class="col-auto my-1">
+      <div class="col-auto">
         <button type="submit" class="btn btn-primary">Download</button>
       </div>
-      <div class="col-auto my-1">
-        <div class="input-group">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="audioCheck" name="audio" />
-            <label class="form-check-label" for="audioCheck">Audio Only</label>
-          </div>
+      <div class="col-auto">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="audioCheck" name="audio" />
+          <label class="form-check-label" for="audioCheck">Audio Only</label>
         </div>
       </div>
-      <div class="col-auto my-1">
+      <div class="col-auto">
         <div class="input-group">
           <span class="input-group-text" id="outfilename-addon">Filename:</span>
           <input class="form-control" id="outfilename" name="outfilename" placeholder="Output filename template" type="text" aria-describedby="outfilename-addon">
         </div>
       </div>
-      <div class="col-auto my-1">
+      <div class="col-auto">
         <div class="input-group">
           <span class="input-group-text" id="vformat-addon">Format:</span>
           <input class="form-control" id="vformat" name="vformat" placeholder="Video format code" type="text" aria-describedby="vformat-addon" />
@@ -103,8 +101,8 @@ require 'views/header.php';
       <div class="card">
         <div class="card-header">Info</div>
         <div class="card-body">
-          <p>Free space : <?php echo $file->free_space(); ?></b></p>
-          <p>Used space : <?php echo $file->used_space(); ?></b></p>
+          <p>Free space : <?php echo $file->free_space(); ?></p>
+          <p>Used space : <?php echo $file->used_space(); ?></p>
           <p>Download folder : <?php echo $file->get_downloads_folder(); ?></p>
           <p>Youtube-dl version : <?php echo Downloader::get_youtubedl_version(); ?></p>
         </div>

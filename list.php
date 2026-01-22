@@ -57,7 +57,7 @@ require 'views/header.php';
     </table>
   <?php
   } else {
-      echo "<br><div class=\"alert alert-warning\" role=\"alert\">No files!</div>";
+      echo "<br><div class=\"alert\">No files!</div>";
   }
 ?>
   <br />
@@ -65,7 +65,7 @@ require 'views/header.php';
 if (!empty($parts)) {
     ?>
     <h2>List of part files:</h2>
-    <table class="table table-striped table-hover ">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>Title</th>

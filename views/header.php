@@ -4,20 +4,20 @@
 <head>
   <meta charset="utf-8">
   <title>Youtube-dl WebUI</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" media="screen">
+
   <link rel="stylesheet" href="./css/custom.css">
   <link rel="Shortcut Icon" href="./favicon_144.png" type="image/x-icon">
 </head>
 
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-light px-2">
-    <div class="container-fluid">
+  <nav class="navbar">
+    <div class="container">
       <a class="navbar-brand" href="./">Youtube-dl WebUI</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" onclick="toggleNavbar()" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
+      <div class="navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav">
           <?php
 
           use App\Utils\Downloader;
@@ -75,15 +75,15 @@
             <?php
             }
               ?>
-            <li class="nav-item mx-1 dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" onclick="toggleDropdown(this)" aria-expanded="false">
                 <?php if (Downloader::background_jobs() > 0) {
                     echo "<b>";
                 } ?>Background downloads : <?php echo Downloader::background_jobs() . " / " . Downloader::max_background_jobs();
               if (Downloader::background_jobs() > 0) {
                   echo "</b>";
               } ?> <span class="caret"></span></a>
-              <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <ul class="dropdown-menu">
                 <?php
                 if (count(Downloader::get_current_background_jobs())) {
                     foreach (Downloader::get_current_background_jobs() as $key) {
@@ -104,7 +104,7 @@
           ?>
         </ul>
       </div>
-      <ul class="navbar-nav mr-auto justify-content-end">
+      <ul class="navbar-nav navbar-end">
         <?php
         if ($session->is_logged_in()) {
             ?>

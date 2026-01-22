@@ -38,7 +38,7 @@ if ($session->is_logged_in() !== true) {
 
   if (isset($_SESSION['errors']) && $_SESSION['errors'] > 0) {
       foreach ($_SESSION['errors'] as $e) {
-          echo "<div class=\"alert alert-warning\" role=\"alert\">$e</div>";
+          echo "<div class=\"alert\">$e</div>";
       }
   }
 
@@ -46,7 +46,7 @@ if ($session->is_logged_in() !== true) {
   <form id="info-form" action="info.php" method="post">
     <div class="row my-3">
       <div class="input-group">
-        <div class="input-group-text" id="urls-addon">URLs:</div>
+        <span class="input-group-text" id="urls-addon">URLs:</span>
         <input class="form-control" id="url" name="urls" placeholder="Link(s) separated by a space" type="text" aria-describedby="urls-addon" required />
       </div>
     </div>
@@ -62,11 +62,11 @@ if ($session->is_logged_in() !== true) {
     <?php
   if ($json) {
       ?>
-      <div class="panel panel-info">
-        <div class="panel-heading">
-          <h3 class="panel-title">Info</h3>
+      <div class="card">
+        <div class="card-header">
+          <h3>Info</h3>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
           <textarea rows="50" class="form-control"><?php echo $json ?></textarea>
         </div>
       </div>

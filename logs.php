@@ -31,7 +31,7 @@ require 'views/header.php';
   if (!empty($files)) {
       ?>
     <h1>List of logs:</h1>
-    <table class="table table-striped table-hover ">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>Timestamp</th>
@@ -64,7 +64,7 @@ require 'views/header.php';
     <br />
   <?php
   } else {
-      echo "<br><div class=\"alert alert-warning\" role=\"alert\">No logs!</div>";
+      echo "<br><div class=\"alert\">No logs!</div>";
   }
 ?>
   <br />

@@ -1,8 +1,5 @@
 # Youtube-dl WebUI
 
-![Main](/img/main.png?raw=true)
-![List](/img/list.png?raw=true)
-
 ## Description
 Youtube-dl WebUI is a small web interface for youtube-dl/yt-dlp. It allows you to host your own video downloader. 
 After the download you can stream your videos from your web browser (or VLC or others)
@@ -10,6 +7,14 @@ or save it on your computer directly from the list page.
 
 ### Why I forkerd it?
 I just wanted to challenge myself a little bit and do small refactoring to some random legacy piece of php code. Also I needed such solution on my home media server so why not to make stuff more complicated and instead of using anything that is already operational way I like, to force some random piece of code to work way I like. ;)
+
+### v0.2.0 Changes
+- Removed Bootstrap CSS and JavaScript dependencies
+- Switched to vanilla CSS and JavaScript
+- Updated PHP to version 8.3
+- Updated RoadRunner to latest version
+- Added GitHub Actions for automated Docker image building and pushing to GHCR.io
+- Updated dependencies
 
 It supports:
 
@@ -50,8 +55,7 @@ docker run --rm -d -p '8080:8080' Youtube-dl-WebUI
 
 Youtube-dl WebUI uses:
 
-- [Bootstrap 5](https://getbootstrap.com/docs/5.2/) (with Popper and jQuery 3)
-- [Bootstrap Icons](https://icons.getbootstrap.com/)
+- Vanilla CSS and JavaScript
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) or [youtube-dl](https://youtube-dl.org/) (or any compatible fork)
 - [FFmpeg](https://ffmpeg.org/) for media manipulation, if present
 
