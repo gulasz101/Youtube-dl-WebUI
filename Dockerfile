@@ -1,31 +1,32 @@
-FROM ghcr.io/roadrunner-server/roadrunner:latest AS roadrunner
-FROM composer:latest AS composer
 FROM php:8.3-alpine
 
-RUN apk add \
-  git \
-  curl \
-  python3 \
-  ffmpeg
+# Install system dependencies with cache
+RUN --mount=type=cache,target=/var/cache/apk \
+  apk add --no-cache \
+    git \
+    curl \
+    python3 \
+    ffmpeg
 
+# Install PHP extensions
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions \
-  sockets \
-  zip \
-  mbstring
+RUN install-php-extensions sockets zip mbstring
 
+# Download yt-dlp
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+  && chmod a+rx /usr/local/bin/yt-dlp
 
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-RUN chmod a+rx /usr/local/bin/yt-dlp
+# Copy RoadRunner and Composer from their images
+COPY --from=ghcr.io/roadrunner-server/roadrunner:latest /usr/bin/rr /usr/local/bin/rr
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /app
-
+# Set up user and directories
 RUN addgroup -g "1000" -S php \
   && adduser --system --gecos "" --ingroup "php" --uid "1000" php \
   && mkdir /var/run/rr \
   && chown php /var/run/rr
 
-COPY --from=roadrunner /usr/bin/rr /usr/local/bin/rr
-COPY --from=composer /usr/bin/composer /usr/bin/composer
+WORKDIR /app
+USER php
 
 CMD ["rr", "serve"]
