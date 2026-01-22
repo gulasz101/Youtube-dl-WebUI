@@ -36,7 +36,7 @@ It supports:
 ### Recommended way:
 I recommend using the pre-built Docker image from GitHub Container Registry:
 ```
-docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:v0.2.0
+docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:v0.2.1
 ```
 - visit [localhost]( http://localhost:8080 )
 
