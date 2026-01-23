@@ -40,7 +40,8 @@ FROM php:8.5-alpine
 RUN apk add --no-cache \
     python3 \
     ffmpeg \
-    wget
+    wget \
+    deno
 
 # Install PHP extensions and clean up installer
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/

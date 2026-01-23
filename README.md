@@ -8,7 +8,11 @@ or save it on your computer directly from the list page.
 ### Why I forked it?
 I just wanted to challenge myself a little bit and do small refactoring to some random legacy piece of php code. Also I needed such solution on my home media server so why not to make stuff more complicated and instead of using anything that is already operational way I like, to force some random piece of code to work way I like. ;)
 
-### v0.4.0 Changes (Latest)
+### v0.4.3 Changes (Latest)
+- **Deno JavaScript Runtime**: Added deno support for YouTube video extraction (fixes bot protection)
+- **Bug Fixes**: Fixed delete functionality in logs.php and list.php (PSR-7 request handling)
+
+### v0.4.0 Changes
 - **PHP 8.5**: Upgraded to latest stable PHP 8.5 with updated dependencies (symfony/process ^7.0, phpstan ^2.0)
 - **PicoCSS Framework**: Replaced custom CSS with PicoCSS v2 for modern, semantic, class-less HTML design
 - **Authentication Removed**: Simplified for homelab/local network use - no login required
@@ -64,7 +68,7 @@ Or use a specific version:
 docker run --rm -d -p 8080:8080 \
   -v $(pwd)/downloads:/app/downloads \
   -v $(pwd)/logs:/app/logs \
-  ghcr.io/gulasz101/youtube-dl-webui:v0.4.0
+  ghcr.io/gulasz101/youtube-dl-webui:v0.4.3
 ```
 
 Then visit [http://localhost:8080](http://localhost:8080)
