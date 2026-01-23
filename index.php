@@ -38,12 +38,16 @@ if (isset($postInput['urls']) && !empty($postInput['urls'])) {
         $vformat = $postInput['vformat'];
     }
 
-    $downloader = new Downloader($postInput['urls']);
-    $downloader->download($audio_only, $outfilename, $vformat);
+    try {
+        $downloader = new Downloader($postInput['urls']);
+        $downloader->download($audio_only, $outfilename, $vformat);
 
-    // Redirect after download if no errors
-    if (empty($errors)) {
-        return new Response(302, ['Location' => 'index.php']);
+        // Redirect after download if no errors
+        if (empty($errors)) {
+            return new Response(302, ['Location' => 'index.php']);
+        }
+    } catch (\Throwable $e) {
+        $errors[] = 'Error starting download: ' . $e->getMessage();
     }
 }
 

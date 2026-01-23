@@ -19,8 +19,12 @@ $errors = [];
 $json = false;
 
 if (isset($postInput['urls']) && !empty($postInput['urls'])) {
-    $downloader = new Downloader($postInput['urls']);
-    $json = $downloader->info();
+    try {
+        $downloader = new Downloader($postInput['urls']);
+        $json = $downloader->info();
+    } catch (\Throwable $e) {
+        $errors[] = 'Error fetching video info: ' . $e->getMessage();
+    }
 }
 
 ob_start();
