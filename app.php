@@ -73,7 +73,13 @@ while (true) {
             '/logs.php' => require __DIR__ . '/logs.php',
             '/list.php' => require __DIR__ . '/list.php',
             '/favicon.ico' => new Response(200, ['Content-Type' => 'image/x-icon'], file_get_contents(__DIR__ . '/favicon_144.png')),
-            default => new Response(200, ['Content-Type' => getMimeType($path)], file_get_contents(__DIR__ . $path)),
+            default => (function() use ($path) {
+                $filePath = __DIR__ . $path;
+                if (file_exists($filePath) && is_file($filePath)) {
+                    return new Response(200, ['Content-Type' => getMimeType($path)], file_get_contents($filePath));
+                }
+                return new Response(404, ['Content-Type' => 'text/plain'], 'Not Found');
+            })(),
         };
 
         $psr7->respond($response);

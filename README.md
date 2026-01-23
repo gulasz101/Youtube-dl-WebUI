@@ -8,7 +8,13 @@ or save it on your computer directly from the list page.
 ### Why I forked it?
 I just wanted to challenge myself a little bit and do small refactoring to some random legacy piece of php code. Also I needed such solution on my home media server so why not to make stuff more complicated and instead of using anything that is already operational way I like, to force some random piece of code to work way I like. ;)
 
-### v0.4.3 Changes (Latest)
+### v0.4.4 Changes (Latest)
+- **Bug Fixes**: Fixed Chrome DevTools 404 causing HTTP 500 errors and worker crashes
+- **RoadRunner Config**: Updated to version 3 (removes startup warning)
+- **Clean Logs**: Suppressed PHP 8.5 deprecation warnings from vendor packages
+- **Error Handling**: Proper 404 responses for missing static files
+
+### v0.4.3 Changes
 - **Deno JavaScript Runtime**: Added deno support for YouTube video extraction (fixes bot protection)
 - **Bug Fixes**: Fixed delete functionality in logs.php and list.php (PSR-7 request handling)
 
@@ -68,7 +74,7 @@ Or use a specific version:
 docker run --rm -d -p 8080:8080 \
   -v $(pwd)/downloads:/app/downloads \
   -v $(pwd)/logs:/app/logs \
-  ghcr.io/gulasz101/youtube-dl-webui:v0.4.3
+  ghcr.io/gulasz101/youtube-dl-webui:v0.4.4
 ```
 
 Then visit [http://localhost:8080](http://localhost:8080)
