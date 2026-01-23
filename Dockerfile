@@ -2,21 +2,14 @@
 # Stage 1: Builder - Install dependencies
 # ============================================
 FROM composer:latest AS composer
-FROM php:8.3-alpine AS builder
+FROM phpswoole/swoole:5.1-php8.3-alpine AS builder
 
 # Copy composer
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-# Install build tools for OpenSwoole
-RUN apk add --no-cache \
-    autoconf \
-    g++ \
-    make \
-    openssl-dev
-
-# Install PHP extensions for builder (including Swoole)
+# Install additional PHP extensions (Swoole already included in base image)
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions sockets zip mbstring swoole
+RUN install-php-extensions zip mbstring
 
 # Set working directory
 WORKDIR /app
@@ -41,23 +34,18 @@ RUN composer dump-autoload --classmap-authoritative --no-dev
 # ============================================
 # Stage 2: Runtime - Production image
 # ============================================
-FROM php:8.3-alpine
+FROM phpswoole/swoole:5.1-php8.3-alpine
 
-# Install runtime dependencies and build tools for OpenSwoole
+# Install runtime dependencies (Swoole already included in base image)
 RUN apk add --no-cache \
     python3 \
     ffmpeg \
     wget \
-    deno \
-    autoconf \
-    g++ \
-    make \
-    openssl-dev \
-    php83-dev
+    deno
 
-# Install PHP extensions including Swoole
+# Install additional PHP extensions (Swoole already included)
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions sockets zip mbstring swoole \
+RUN install-php-extensions zip mbstring \
     && rm /usr/local/bin/install-php-extensions
 
 # Download yt-dlp latest version
