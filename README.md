@@ -8,7 +8,18 @@ or save it on your computer directly from the list page.
 ### Why I forked it?
 I just wanted to challenge myself a little bit and do small refactoring to some random legacy piece of php code. Also I needed such solution on my home media server so why not to make stuff more complicated and instead of using anything that is already operational way I like, to force some random piece of code to work way I like. ;)
 
-### v0.4.5 Changes (Latest)
+### v0.5.0 Changes (Latest) - Swoole Migration
+- **🚀 Swoole Server**: Migrated from RoadRunner to Swoole for better async performance and coroutine support
+- **⚡ Async Downloads**: Non-blocking downloads with coroutines - download multiple videos simultaneously
+- **📊 Real-Time Progress**: Server-Sent Events (SSE) for live download progress updates (no more polling!)
+- **🎬 In-Browser Playback**: Watch videos directly in browser with seeking support via HTTP range requests
+- **🎯 Format Selection**: Dynamic format/quality dropdowns populated from yt-dlp metadata
+- **📝 Structured Logging**: JSON-based logging with Monolog for better debugging
+- **💾 Job Management**: Shared memory job tracking across all workers using Swoole\Table
+- **🎨 Enhanced UI**: Progress bars, quality selectors, and inline video player
+- **⚙️ PHP 8.3**: Using PHP 8.3 for Swoole compatibility (Swoole doesn't support PHP 8.5 yet)
+
+### v0.4.5 Changes
 - **Critical Fix**: Resolved RoadRunner worker corruption causing random 404 errors after exceptions
 - **Worker Management**: Configure automatic worker restarts (max 50 requests per worker)
 - **Multiple Workers**: Run 2 workers for better concurrency and fault tolerance
@@ -51,18 +62,20 @@ I just wanted to challenge myself a little bit and do small refactoring to some 
 
 It supports:
 
-* simultaneous downloads in background
+* simultaneous async downloads in background with real-time progress
 * yt-dlp, youtube-dl (and others)
-* logging
-* fetch info without download
+* structured JSON logging
+* fetch video info and available formats before download
+* in-browser video/audio playback with seeking
+* dynamic format and quality selection
 
 ## Requirements
-- [web server - RoadRunner]( https://roadrunner.dev/ )
-- PHP 8.5 (recommended) or PHP >= 8.3
+- PHP 8.3 or higher (PHP 8.5 not yet supported by Swoole)
+- [Swoole extension](https://www.swoole.co.uk/) (v5.0+)
 - composer
 - python3 for yt-dlp
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- ffmpeg (or avconv) is required for audio extraction, from youtube-dl doc:
+- ffmpeg (or avconv) is required for audio extraction:
 `-x, --extract-audio convert video files to audio-only files (requires ffmpeg or avconv and ffprobe or avprobe)`
 
 ## How to install?
@@ -80,29 +93,87 @@ Or use a specific version:
 docker run --rm -d -p 8080:8080 \
   -v $(pwd)/downloads:/app/downloads \
   -v $(pwd)/logs:/app/logs \
-  ghcr.io/gulasz101/youtube-dl-webui:v0.4.5
+  ghcr.io/gulasz101/youtube-dl-webui:v0.5.0
 ```
 
 Then visit [http://localhost:8080](http://localhost:8080)
 
 **Note**: The application is designed for homelab/trusted network use and has no authentication.
 
-### Non recommended way:
-- clone repo
-- go inside, `cd Youtube-dl-WebUI`
-- execute `composer install`
-- execute `rr serve`
-- visit [localhost]( http://localhost:8080 )
+### Manual Installation (Advanced):
+If you prefer to run without Docker:
+
+1. **Install Swoole extension:**
+```bash
+pecl install swoole
+echo "extension=swoole.so" >> /path/to/php.ini
+```
+
+2. **Clone and setup:**
+```bash
+git clone https://github.com/gulasz101/Youtube-dl-WebUI.git
+cd Youtube-dl-WebUI
+composer install
+```
+
+3. **Configure:**
+```bash
+cp config/config.php.example config/config.php
+# Edit config/config.php with your settings
+```
+
+4. **Start the server:**
+```bash
+php swoole-server.php
+```
+
+5. **Visit [http://localhost:8080](http://localhost:8080)**
+
+### Configuration
+
+Edit `config/config.php`:
+- `bin`: Path to yt-dlp binary (default: `/usr/local/bin/yt-dlp`)
+- `outputFolder`: Download directory (default: `downloads`)
+- `logFolder`: Log directory (default: `logs`)
+- `max_dl`: Maximum concurrent downloads (default: `3`, `0` = unlimited)
 
 ## Libraries & Technologies
 
 Youtube-dl WebUI uses:
 
 - [PicoCSS v2](https://picocss.com/) - Minimal CSS framework for semantic HTML
-- Vanilla JavaScript for interactivity
-- [PHP 8.5](https://www.php.net/) with [RoadRunner](https://roadrunner.dev/) application server
+- Vanilla JavaScript with Server-Sent Events (SSE) for real-time updates
+- [PHP 8.3](https://www.php.net/) with [Swoole](https://www.swoole.co.uk/) coroutine server
+- [Monolog](https://github.com/Seldaek/monolog) - Structured JSON logging
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) or [youtube-dl](https://youtube-dl.org/) (or any compatible fork)
-- [FFmpeg](https://ffmpeg.org/) for media manipulation, if present
+- [FFmpeg](https://ffmpeg.org/) for media manipulation and audio extraction
+
+## Features
+
+### 🎯 Smart Format Selection
+- Fetch available formats/qualities before downloading
+- Dynamic dropdowns with resolution, codec, and file size info
+- Quality presets: Best, 1080p, 720p, 480p, 360p, Worst
+
+### ⚡ Async Downloads
+- Non-blocking concurrent downloads using Swoole coroutines
+- Configurable max concurrent downloads
+- Background job management with shared memory
+
+### 📊 Real-Time Progress
+- Live download progress via Server-Sent Events
+- Progress bars in job dropdown
+- Instant status updates (queued → downloading → completed)
+
+### 🎬 In-Browser Playback
+- Click video files to play directly in browser
+- HTTP range request support for seeking
+- Works with mp4, webm, mkv, mp3, etc.
+
+### 📝 Structured Logging
+- JSON-formatted logs with Monolog
+- Searchable and parsable log entries
+- Job lifecycle tracking
 
 
 ## License

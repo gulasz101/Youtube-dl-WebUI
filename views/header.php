@@ -30,19 +30,10 @@
           if ($filesCount > 0) echo " ($filesCount)";
         ?></a></li>
         <?php } ?>
-        <li><details>
-          <summary>Jobs: <?php echo Downloader::background_jobs() . "/" . Downloader::max_background_jobs(); ?></summary>
-          <ul>
-            <?php
-            if (count(Downloader::get_current_background_jobs())) {
-              foreach (Downloader::get_current_background_jobs() as $key) {
-                echo "<li><small>" . htmlspecialchars($key['time']) . "</small></li>";
-              }
-              echo "<li><a href=\"./index.php?kill=all\">Kill all</a></li>";
-            } else {
-              echo "<li>No active jobs</li>";
-            }
-            ?>
+        <li><details id="jobs-dropdown">
+          <summary>Jobs: <span id="job-count">0</span>/<span id="max-jobs"><?php echo Downloader::max_background_jobs(); ?></span></summary>
+          <ul id="job-list">
+            <li>Loading...</li>
           </ul>
         </details></li>
         <li><button onclick="toggleTheme()" aria-label="Toggle theme">🌓</button></li>

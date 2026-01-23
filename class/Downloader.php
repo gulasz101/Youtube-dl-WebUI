@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Utils;
 
 use Symfony\Component\Process\Process;
+use Psr\Log\LoggerInterface;
 
 use function StrictHelpers\glob;
 
@@ -20,6 +21,9 @@ class Downloader
     private string $log_path = "";
     private string $outfilename = "%(title)s-%(id)s.%(ext)s";
     private string $vformat = 'mp4';
+    private string $quality = '';
+    private ?JobManager $jobManager = null;
+    private ?LoggerInterface $logger = null;
 
     public function __construct(string $post)
     {
@@ -53,25 +57,50 @@ class Downloader
         }
     }
 
-    public function download(bool $audio_only, bool $outfilename = false, string|null $vformat = null): void
+    /**
+     * Initialize JobManager and Logger (for async operations)
+     */
+    public function initAsync(): void
+    {
+        $this->jobManager = new JobManager();
+        $this->logger = AppLogger::create();
+    }
+
+    /**
+     * Set quality preference
+     */
+    public function setQuality(string $quality): void
+    {
+        $this->quality = $quality;
+    }
+
+    /**
+     * Download - creates jobs and launches them asynchronously if JobManager is initialized
+     * Falls back to synchronous mode if JobManager is not initialized (for backward compatibility)
+     *
+     * @return array Array of job IDs if async, empty array if sync
+     */
+    public function download(bool $audio_only, bool $outfilename = false, string|null $vformat = null): array
     {
         if ($audio_only && !$this->check_requirements($audio_only)) {
-            return;
+            return [];
         }
 
         if (isset($this->errors) && count($this->errors) > 0) {
             $_SESSION['errors'] = $this->errors;
-            return;
+            return [];
         }
 
-        // TODO: check what is that for
-        /* if ($outfilename) { */
-        /*     $this->outfilename = $outfilename; */
-        /* } */
         if ($vformat) {
             $this->vformat = $vformat;
         }
 
+        // Check if async mode is enabled (JobManager initialized)
+        if ($this->jobManager !== null) {
+            return $this->downloadAsync($audio_only);
+        }
+
+        // Fallback to old synchronous behavior
         if ($this->config["max_dl"] == 0) {
             $this->do_download($audio_only);
         } elseif ($this->config["max_dl"] > 0) {
@@ -84,8 +113,193 @@ class Downloader
 
         if (isset($this->errors) && count($this->errors) > 0) {
             $_SESSION['errors'] = $this->errors;
-            return;
         }
+
+        return [];
+    }
+
+    /**
+     * Async download - creates jobs and launches coroutines
+     */
+    private function downloadAsync(bool $audio_only): array
+    {
+        $jobIds = [];
+
+        // Check max concurrent downloads
+        if ($this->config['max_dl'] > 0) {
+            $activeCount = $this->jobManager->getActiveJobCount();
+            if ($activeCount >= $this->config['max_dl']) {
+                $this->errors[] = "Simultaneous downloads limit reached ({$this->config['max_dl']})!";
+                $_SESSION['errors'] = $this->errors;
+                return [];
+            }
+        }
+
+        // Create a job for each URL
+        foreach ($this->urls as $url) {
+            $jobId = $this->jobManager->createJob($url, [
+                'format' => $this->vformat,
+                'quality' => $this->quality,
+                'audio_only' => $audio_only ? 1 : 0,
+                'status' => 'queued'
+            ]);
+
+            $jobIds[] = $jobId;
+
+            $this->logger->info('Job created', [
+                'job_id' => $jobId,
+                'url' => $url,
+                'audio_only' => $audio_only
+            ]);
+
+            // Launch async download in coroutine
+            go(function() use ($jobId, $url, $audio_only) {
+                $this->doAsyncDownload($jobId, $url, $audio_only);
+            });
+        }
+
+        return $jobIds;
+    }
+
+    /**
+     * Async download execution in coroutine with progress parsing
+     */
+    private function doAsyncDownload(string $jobId, string $url, bool $audio_only): void
+    {
+        $this->jobManager->updateJob($jobId, ['status' => 'downloading']);
+        $this->logger->info('Download started', ['job_id' => $jobId]);
+
+        try {
+            $args = $this->buildYtdlpCommand($url, $audio_only);
+            $cmd = implode(' ', array_map('escapeshellarg', $args)) . ' 2>&1';
+
+            // Use proc_open for streaming output
+            $descriptors = [
+                0 => ['pipe', 'r'],  // stdin
+                1 => ['pipe', 'w'],  // stdout
+                2 => ['pipe', 'w']   // stderr
+            ];
+
+            $process = proc_open($cmd, $descriptors, $pipes);
+
+            if (!is_resource($process)) {
+                throw new \Exception('Failed to start download process');
+            }
+
+            // Close stdin
+            fclose($pipes[0]);
+
+            // Set stdout to non-blocking
+            stream_set_blocking($pipes[1], false);
+
+            $output = '';
+            $lastProgress = 0.0;
+
+            // Read output in non-blocking mode
+            while (!feof($pipes[1])) {
+                $line = fgets($pipes[1]);
+
+                if ($line === false) {
+                    \Swoole\Coroutine::sleep(0.1);
+                    continue;
+                }
+
+                $output .= $line;
+
+                // Parse progress from yt-dlp output
+                // Format: [download]  45.6% of 123.45MiB at 1.23MiB/s ETA 00:12
+                if (preg_match('/\[download\]\s+(\d+\.?\d*)%/', $line, $matches)) {
+                    $progress = (float)$matches[1];
+
+                    // Only update if progress changed by at least 1%
+                    if (abs($progress - $lastProgress) >= 1.0) {
+                        $this->jobManager->updateJob($jobId, ['progress' => $progress]);
+                        $lastProgress = $progress;
+                    }
+                }
+            }
+
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            $exitCode = proc_close($process);
+
+            if ($exitCode === 0) {
+                $this->jobManager->updateJob($jobId, [
+                    'status' => 'completed',
+                    'progress' => 100.0,
+                    'end_time' => time()
+                ]);
+                $this->logger->info('Download completed', ['job_id' => $jobId]);
+            } else {
+                throw new \Exception("yt-dlp exited with code $exitCode");
+            }
+
+        } catch (\Throwable $e) {
+            $this->jobManager->updateJob($jobId, [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+                'end_time' => time()
+            ]);
+            $this->logger->error('Download failed', [
+                'job_id' => $jobId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Build yt-dlp command arguments
+     */
+    private function buildYtdlpCommand(string $url, bool $audio_only): array
+    {
+        $args = [
+            $this->config['bin'],
+            '--restrict-filenames',
+            '--ignore-errors',
+            '-o',
+            $this->download_path . '/' . $this->outfilename,
+        ];
+
+        // Format selection
+        if ($this->vformat && $this->vformat !== 'mp4') {
+            $args[] = '--format';
+            $args[] = $this->vformat;
+        } elseif ($this->quality) {
+            $args[] = '--format';
+            $args[] = $this->buildFormatString($this->quality, $audio_only);
+        } else {
+            // Default format
+            $args[] = '--format';
+            $args[] = $audio_only ? 'bestaudio' : 'bestvideo+bestaudio/best';
+        }
+
+        if ($audio_only) {
+            $args[] = '-x';
+        }
+
+        $args[] = $url;
+
+        return $args;
+    }
+
+    /**
+     * Build format string based on quality preference
+     */
+    private function buildFormatString(string $quality, bool $audio_only): string
+    {
+        if ($audio_only) {
+            return 'bestaudio';
+        }
+
+        return match($quality) {
+            '1080p' => 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+            '720p' => 'bestvideo[height<=720]+bestaudio/best[height<=720]',
+            '480p' => 'bestvideo[height<=480]+bestaudio/best[height<=480]',
+            '360p' => 'bestvideo[height<=360]+bestaudio/best[height<=360]',
+            'worst' => 'worstvideo+worstaudio/worst',
+            default => 'bestvideo+bestaudio/best'
+        };
     }
 
     public function info(): string

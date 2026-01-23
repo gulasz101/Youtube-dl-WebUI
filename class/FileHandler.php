@@ -225,4 +225,13 @@ class FileHandler
 
     return true;
   }
+
+  /**
+   * Check if a file is a media file (video/audio)
+   */
+  public function isMediaFile(string $filename): bool
+  {
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return in_array($ext, ['mp4', 'webm', 'mkv', 'avi', 'mov', 'mp3', 'ogg', 'wav', 'm4a', 'flac', 'aac']);
+  }
 }

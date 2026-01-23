@@ -38,9 +38,24 @@ if (isset($postInput['urls']) && !empty($postInput['urls'])) {
         $vformat = $postInput['vformat'];
     }
 
+    $quality = '';
+    if (isset($postInput['quality']) && !empty($postInput['quality'])) {
+        $quality = $postInput['quality'];
+    }
+
     try {
         $downloader = new Downloader($postInput['urls']);
-        $downloader->download($audio_only, $outfilename, $vformat);
+
+        // Initialize async mode
+        $downloader->initAsync();
+
+        // Set quality if provided
+        if ($quality) {
+            $downloader->setQuality($quality);
+        }
+
+        // Download (now async)
+        $jobIds = $downloader->download($audio_only, $outfilename, $vformat);
 
         // Redirect after download if no errors
         if (empty($errors)) {
@@ -63,21 +78,40 @@ require 'views/header.php';
   }
   ?>
   <form id="download-form" action="index.php" method="post">
-    <label for="url">Video URLs (space-separated):
+    <label for="url">Video URL:
       <input id="url" name="urls" placeholder="https://youtube.com/watch?v=..." type="text" required />
     </label>
+    <button type="button" id="fetch-formats" onclick="fetchFormats()">Fetch Formats</button>
+
     <div class="grid">
+      <label for="quality">Quality:
+        <select id="quality" name="quality">
+          <option value="best" selected>Best</option>
+          <option value="1080p">1080p</option>
+          <option value="720p">720p</option>
+          <option value="480p">480p</option>
+          <option value="360p">360p</option>
+          <option value="worst">Worst</option>
+        </select>
+      </label>
+
       <label>
-        <input type="checkbox" id="audioCheck" name="audio" role="switch" />
+        <input type="checkbox" id="audioCheck" name="audio" role="switch" onchange="toggleFormatType()" />
         Audio Only
       </label>
-      <label for="outfilename">Filename:
+
+      <label for="outfilename">Filename (optional):
         <input id="outfilename" name="outfilename" placeholder="%(title)s-%(id)s.%(ext)s" type="text">
       </label>
-      <label for="vformat">Format:
-        <input id="vformat" name="vformat" placeholder="Format code" type="text" />
-      </label>
     </div>
+
+    <label for="format-select" id="format-label" style="display:none;">
+      Specific Format (optional):
+      <select id="format-select" name="vformat">
+        <option value="">Auto (based on quality)</option>
+      </select>
+    </label>
+
     <button type="submit">Download</button>
   </form>
 

@@ -22,6 +22,10 @@ SESSION_LOG.md
 phpstan.neon
 Standalone.Dockerfile
 
+# Obsolete RoadRunner files
+app.php
+.rr.yaml
+
 # OS files
 .DS_Store
 Thumbs.db
