@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 use App\Utils\FileHandler;
 use Nyholm\Psr7\Response;
+use Psr\Http\Message\ServerRequestInterface;
 
 use function StrictHelpers\ob_get_contents;
 
 $file = new FileHandler();
 
-if (isset($_GET["delete"])) {
-    $file->deleteLog($_GET["delete"]);
+/**
+ * @var ServerRequestInterface $request
+ */
+$queryParams = $request->getQueryParams();
+
+if (isset($queryParams["delete"])) {
+    $file->deleteLog($queryParams["delete"]);
     return new Response(302, ['Location' => 'logs.php']);
 }
 
@@ -47,7 +53,7 @@ require 'views/header.php';
                   echo "<td>" . ($f["ended"] ? '✓' : '') . "</td>";
                   echo "<td>" . ($f["100"] ? '✓' : '') . "</td>";
                   echo "<td>" . $f["size"] . "</td>";
-                  echo "<td><a href=\"./logs.php?delete=" . sha1($f["name"]) . "\" role=\"button\" class=\"secondary\">Delete</a></td>";
+                  echo "<td><a href=\"./logs.php?delete=" . sha1($f["name"]) . "\" class=\"contrast\">Delete</a></td>";
                   echo "</tr>";
               }
         ?>

@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 use App\Utils\FileHandler;
 use Nyholm\Psr7\Response;
+use Psr\Http\Message\ServerRequestInterface;
 
 use function StrictHelpers\ob_get_contents;
 
 $file = new FileHandler();
 
-if (isset($_GET["delete"])) {
-    $file->delete($_GET["delete"]);
+/**
+ * @var ServerRequestInterface $request
+ */
+$queryParams = $request->getQueryParams();
+
+if (isset($queryParams["delete"])) {
+    $file->delete($queryParams["delete"]);
     return new Response(302, ['Location' => 'list.php']);
 }
 
@@ -43,7 +49,7 @@ require 'views/header.php';
                       echo "<td>" . htmlspecialchars($f["name"]) . "</td>";
                   }
                   echo "<td>" . $f["size"] . "</td>";
-                  echo "<td><a href=\"./list.php?delete=" . sha1($f["name"]) . "\" role=\"button\" class=\"secondary\">Delete</a></td>";
+                  echo "<td><a href=\"./list.php?delete=" . sha1($f["name"]) . "\" class=\"contrast\">Delete</a></td>";
                   echo "</tr>";
               }
         ?>
