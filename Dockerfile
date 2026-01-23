@@ -1,12 +1,13 @@
 # ============================================
 # Stage 1: Builder - Install dependencies
 # ============================================
-FROM php:8.3-alpine AS builder
+FROM composer:latest AS composer
+FROM php:8.5-alpine AS builder
 
-# Install composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Copy composer
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-# Install PHP extensions needed for composer dependencies
+# Install PHP extensions for builder
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions sockets zip mbstring
 
@@ -16,7 +17,7 @@ WORKDIR /app
 # Copy composer files first for better layer caching
 COPY composer.json composer.lock* ./
 
-# Install PHP dependencies with optimal settings
+# Install PHP dependencies
 RUN composer install \
     --no-dev \
     --no-scripts \
@@ -33,23 +34,21 @@ RUN composer dump-autoload --classmap-authoritative --no-dev
 # ============================================
 # Stage 2: Runtime - Production image
 # ============================================
-FROM php:8.3-alpine
+FROM php:8.5-alpine
 
-# Pin yt-dlp version for better layer caching
-ARG YT_DLP_VERSION=2024.12.23
-
-# Install runtime dependencies (no cache, minimal layers)
+# Install runtime dependencies
 RUN apk add --no-cache \
     python3 \
-    ffmpeg
+    ffmpeg \
+    wget
 
 # Install PHP extensions and clean up installer
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions sockets zip mbstring \
     && rm /usr/local/bin/install-php-extensions
 
-# Download yt-dlp with pinned version
-RUN wget -q "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" -O /usr/local/bin/yt-dlp \
+# Download yt-dlp latest version
+RUN wget -q "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" -O /usr/local/bin/yt-dlp \
     && chmod a+rx /usr/local/bin/yt-dlp
 
 # Copy RoadRunner binary

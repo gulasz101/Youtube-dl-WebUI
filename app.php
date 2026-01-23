@@ -69,8 +69,6 @@ while (true) {
 
         $response = match ($path) {
             '/', '/index.php' => require __DIR__ . '/index.php',
-            '/login.php' => require __DIR__ . '/login.php',
-            '/logout.php' => require __DIR__ . '/logout.php',
             '/info.php' => require __DIR__ . '/info.php',
             '/logs.php' => require __DIR__ . '/logs.php',
             '/list.php' => require __DIR__ . '/list.php',
