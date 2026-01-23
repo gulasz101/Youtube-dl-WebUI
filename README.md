@@ -5,8 +5,17 @@ Youtube-dl WebUI is a small web interface for youtube-dl/yt-dlp. It allows you t
 After the download you can stream your videos from your web browser (or VLC or others)
 or save it on your computer directly from the list page.
 
-### Why I forkerd it?
+### Why I forked it?
 I just wanted to challenge myself a little bit and do small refactoring to some random legacy piece of php code. Also I needed such solution on my home media server so why not to make stuff more complicated and instead of using anything that is already operational way I like, to force some random piece of code to work way I like. ;)
+
+### v0.4.0 Changes (Latest)
+- **PHP 8.5**: Upgraded to latest stable PHP 8.5 with updated dependencies (symfony/process ^7.0, phpstan ^2.0)
+- **PicoCSS Framework**: Replaced custom CSS with PicoCSS v2 for modern, semantic, class-less HTML design
+- **Authentication Removed**: Simplified for homelab/local network use - no login required
+- **Semantic HTML5**: All pages converted to use semantic elements (nav, main, article, figure)
+- **Enhanced Dark Mode**: Integrated with PicoCSS data-theme system
+- **Simplified Configuration**: Removed authentication-related settings from config
+- **Faster Builds**: ~47 second Docker builds with optimized caching
 
 ### v0.3.0 Changes
 - **Modern UI Design**: Completely redesigned interface with 2024+ aesthetic using design tokens (CSS custom properties)
@@ -33,25 +42,34 @@ It supports:
 
 ## Requirements
 - [web server - RoadRunner]( https://roadrunner.dev/ )
-- PHP >= 8 version should be fine.
+- PHP 8.5 (recommended) or PHP >= 8.3
 - composer
-- python3 for yt-dlp.
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp).
-- ffmpeg (or avconv) is required for audio extraction, from youtube-dl doc :
+- python3 for yt-dlp
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- ffmpeg (or avconv) is required for audio extraction, from youtube-dl doc:
 `-x, --extract-audio convert video files to audio-only files (requires ffmpeg or avconv and ffprobe or avprobe)`
 
-## How to install ?
+## How to install?
 ### Recommended way:
 I recommend using the pre-built Docker image from GitHub Container Registry:
-```
-docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:latest
+```bash
+docker run --rm -d -p 8080:8080 \
+  -v $(pwd)/downloads:/app/downloads \
+  -v $(pwd)/logs:/app/logs \
+  ghcr.io/gulasz101/youtube-dl-webui:latest
 ```
 
 Or use a specific version:
+```bash
+docker run --rm -d -p 8080:8080 \
+  -v $(pwd)/downloads:/app/downloads \
+  -v $(pwd)/logs:/app/logs \
+  ghcr.io/gulasz101/youtube-dl-webui:v0.4.0
 ```
-docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:v0.3.0
-```
-- visit [localhost]( http://localhost:8080 )
+
+Then visit [http://localhost:8080](http://localhost:8080)
+
+**Note**: The application is designed for homelab/trusted network use and has no authentication.
 
 ### Non recommended way:
 - clone repo
@@ -60,11 +78,13 @@ docker run --rm -d -p '8080:8080' ghcr.io/gulasz101/youtube-dl-webui:v0.3.0
 - execute `rr serve`
 - visit [localhost]( http://localhost:8080 )
 
-## Library
+## Libraries & Technologies
 
 Youtube-dl WebUI uses:
 
-- Vanilla CSS and JavaScript
+- [PicoCSS v2](https://picocss.com/) - Minimal CSS framework for semantic HTML
+- Vanilla JavaScript for interactivity
+- [PHP 8.5](https://www.php.net/) with [RoadRunner](https://roadrunner.dev/) application server
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) or [youtube-dl](https://youtube-dl.org/) (or any compatible fork)
 - [FFmpeg](https://ffmpeg.org/) for media manipulation, if present
 
