@@ -69,6 +69,10 @@ COPY --from=builder --chown=php:php /app/vendor ./vendor
 # Copy application files
 COPY --chown=php:php . .
 
+# Create config.php from example (config.php is in .gitignore)
+RUN cp config/config.php.example config/config.php \
+    && chown php:php config/config.php
+
 # Switch to non-root user
 USER php
 
