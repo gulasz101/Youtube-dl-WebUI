@@ -21,11 +21,58 @@ if (isset($queryParams["delete"])) {
 }
 
 $files = $file->listLogs();
+$appLogs = $file->getAppLogEntries(50); // Get last 50 app log entries
 
 ob_start();
 
 require 'views/header.php';
 ?>
+  <?php
+  // Application Logs Section
+  if (!empty($appLogs)) {
+      ?>
+    <h1>Application Logs</h1>
+    <figure>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Level</th>
+            <th>Message</th>
+            <th>Context</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php
+              foreach ($appLogs as $log) {
+                  $timestamp = $log['datetime'] ?? 'N/A';
+                  $level = $log['level_name'] ?? $log['level'] ?? 'INFO';
+                  $message = $log['message'] ?? '';
+                  $context = $log['context'] ?? [];
+
+                  // Format level with color
+                  $levelClass = match($level) {
+                      'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'style="color: var(--pico-del-color);"',
+                      'WARNING' => 'style="color: var(--pico-ins-color);"',
+                      'INFO' => '',
+                      default => ''
+                  };
+
+                  echo "<tr>";
+                  echo "<td><small>" . htmlspecialchars(substr($timestamp, 11, 8)) . "</small></td>"; // HH:MM:SS
+                  echo "<td {$levelClass}><strong>" . htmlspecialchars($level) . "</strong></td>";
+                  echo "<td>" . htmlspecialchars($message) . "</td>";
+                  echo "<td><small><code>" . htmlspecialchars(json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) . "</code></small></td>";
+                  echo "</tr>";
+              }
+        ?>
+        </tbody>
+      </table>
+    </figure>
+  <?php
+  }
+  ?>
+
   <?php
   if (!empty($files)) {
       ?>

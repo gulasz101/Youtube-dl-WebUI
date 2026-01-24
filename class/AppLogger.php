@@ -34,11 +34,14 @@ class AppLogger
             mkdir($logsDir, 0755, true);
         }
 
-        // Create stream handler for application logs
-        $stream = new StreamHandler($logsDir . '/app.log', Logger::INFO);
-        $stream->setFormatter(new JsonFormatter());
+        // Create stream handler for application logs (JSON format)
+        $fileStream = new StreamHandler($logsDir . '/app.log', Logger::INFO);
+        $fileStream->setFormatter(new JsonFormatter());
+        $logger->pushHandler($fileStream);
 
-        $logger->pushHandler($stream);
+        // Add stdout handler for Docker console (plain text format)
+        $stdoutStream = new StreamHandler('php://stdout', Logger::INFO);
+        $logger->pushHandler($stdoutStream);
 
         self::$instance = $logger;
 

@@ -234,4 +234,40 @@ class FileHandler
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     return in_array($ext, ['mp4', 'webm', 'mkv', 'avi', 'mov', 'mp3', 'ogg', 'wav', 'm4a', 'flac', 'aac']);
   }
+
+  /**
+   * Get application log entries from app.log (JSON Lines format)
+   *
+   * @param int $limit Maximum number of entries to return (default: 100)
+   * @return array<int, array<string, mixed>> Array of log entries, newest first
+   */
+  public function getAppLogEntries(int $limit = 100): array
+  {
+    $logFile = dirname(__DIR__) . '/logs/app.log';
+
+    if (!file_exists($logFile)) {
+      return [];
+    }
+
+    $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) {
+      return [];
+    }
+
+    // Get last N lines (newest entries)
+    $lines = array_slice($lines, -$limit);
+
+    // Reverse to show newest first
+    $lines = array_reverse($lines);
+
+    $entries = [];
+    foreach ($lines as $line) {
+      $entry = json_decode($line, true);
+      if ($entry !== null) {
+        $entries[] = $entry;
+      }
+    }
+
+    return $entries;
+  }
 }
