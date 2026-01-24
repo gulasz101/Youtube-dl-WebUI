@@ -167,118 +167,182 @@ $server->on('Request', function(Request $request, Response $response) use ($conf
         }
 
         if ($path === '/api/formats' && $request->server['request_method'] === 'POST') {
-            $postData = json_decode($request->rawContent(), true);
+            $logger->info('Received /api/formats request');
+
+            $rawContent = $request->rawContent();
+            $logger->info('Raw request body', ['body' => substr($rawContent, 0, 500)]);
+
+            $postData = json_decode($rawContent, true);
             $url = $postData['url'] ?? '';
 
+            $logger->info('Parsed request data', ['url' => $url, 'post_data_keys' => array_keys($postData ?? [])]);
+
             if (empty($url)) {
+                $logger->warning('Empty URL provided');
                 $response->status(400);
                 $response->header('Content-Type', 'application/json');
                 $response->end(json_encode(['error' => 'URL required']));
                 return;
             }
 
-            // Create job for format fetching
-            $jobId = $jobManager->createJob($url, [
-                'status' => 'fetching_formats',
-                'progress' => 0.0,
-                'type' => 'format_fetch'
-            ]);
+            try {
+                // Create job for format fetching
+                $jobId = $jobManager->createJob($url, [
+                    'status' => 'fetching_formats',
+                    'progress' => 0.0,
+                    'type' => 'format_fetch'
+                ]);
 
-            $logger->info('Format fetch job created', ['job_id' => $jobId, 'url' => $url]);
+                $logger->info('Format fetch job created', ['job_id' => $jobId, 'url' => $url]);
 
-            // Execute yt-dlp -J in coroutine to get formats
-            go(function() use ($url, $response, $config, $jobManager, $logger, $jobId) {
-                try {
-                    $jobManager->updateJob($jobId, ['status' => 'fetching_formats', 'progress' => 50.0]);
+                // Execute yt-dlp -J in coroutine to get formats
+                go(function() use ($url, $response, $config, $jobManager, $logger, $jobId) {
+                    try {
+                        $logger->info('Starting coroutine for format fetch', ['job_id' => $jobId]);
 
-                    $cmd = escapeshellarg($config['bin']) . ' -J ' . escapeshellarg($url) . ' 2>&1';
-                    $result = \Swoole\Coroutine\System::exec($cmd);
+                        $jobManager->updateJob($jobId, ['status' => 'fetching_formats', 'progress' => 50.0]);
 
-                    if ($result['code'] === 0) {
-                        $data = json_decode($result['output'], true);
+                        $cmd = escapeshellarg($config['bin']) . ' -J ' . escapeshellarg($url) . ' 2>&1';
+                        $logger->info('Executing yt-dlp command', ['job_id' => $jobId, 'cmd' => $cmd]);
 
-                        if (!$data) {
+                        $result = \Swoole\Coroutine\System::exec($cmd);
+
+                        $logger->info('yt-dlp command completed', [
+                            'job_id' => $jobId,
+                            'exit_code' => $result['code'],
+                            'output_length' => strlen($result['output'] ?? ''),
+                            'output_preview' => substr($result['output'] ?? '', 0, 200)
+                        ]);
+
+                        if ($result['code'] === 0) {
+                            $data = json_decode($result['output'], true);
+
+                            if (!$data) {
+                                $errorMsg = 'Failed to parse video info - invalid JSON';
+                                $jobManager->updateJob($jobId, [
+                                    'status' => 'failed',
+                                    'error' => $errorMsg,
+                                    'end_time' => time()
+                                ]);
+                                $logger->error('Format fetch failed - parse error', [
+                                    'job_id' => $jobId,
+                                    'json_error' => json_last_error_msg(),
+                                    'output_preview' => substr($result['output'] ?? '', 0, 500)
+                                ]);
+
+                                $response->status(500);
+                                $response->header('Content-Type', 'application/json');
+                                $response->end(json_encode([
+                                    'error' => $errorMsg,
+                                    'details' => 'JSON parse error: ' . json_last_error_msg()
+                                ]));
+                                return;
+                            }
+
+                            $formats = $data['formats'] ?? [];
+                            $logger->info('Parsed formats data', [
+                                'job_id' => $jobId,
+                                'total_formats' => count($formats),
+                                'has_title' => isset($data['title'])
+                            ]);
+
+                            // Filter video and audio formats
+                            $videoFormats = array_filter($formats, function($f) {
+                                return isset($f['vcodec']) && $f['vcodec'] !== 'none';
+                            });
+
+                            $audioFormats = array_filter($formats, function($f) {
+                                return isset($f['acodec']) && $f['acodec'] !== 'none' &&
+                                       (!isset($f['vcodec']) || $f['vcodec'] === 'none');
+                            });
+
+                            // Mark job as completed
                             $jobManager->updateJob($jobId, [
-                                'status' => 'failed',
-                                'error' => 'Failed to parse video info',
+                                'status' => 'completed',
+                                'progress' => 100.0,
                                 'end_time' => time()
                             ]);
-                            $logger->error('Format fetch failed - parse error', ['job_id' => $jobId]);
+                            $logger->info('Format fetch completed', [
+                                'job_id' => $jobId,
+                                'video_count' => count($videoFormats),
+                                'audio_count' => count($audioFormats)
+                            ]);
+
+                            $responseData = [
+                                'video_formats' => array_values($videoFormats),
+                                'audio_formats' => array_values($audioFormats),
+                                'title' => $data['title'] ?? 'Unknown',
+                                'job_id' => $jobId
+                            ];
+
+                            $logger->info('Sending success response', [
+                                'job_id' => $jobId,
+                                'response_size' => strlen(json_encode($responseData))
+                            ]);
+
+                            $response->header('Content-Type', 'application/json');
+                            $response->end(json_encode($responseData));
+                        } else {
+                            $errorOutput = $result['output'] ?? 'Unknown error';
+                            $jobManager->updateJob($jobId, [
+                                'status' => 'failed',
+                                'error' => 'yt-dlp failed: ' . substr($errorOutput, 0, 500),
+                                'end_time' => time()
+                            ]);
+                            $logger->error('Format fetch failed - yt-dlp error', [
+                                'job_id' => $jobId,
+                                'exit_code' => $result['code'],
+                                'output' => $errorOutput
+                            ]);
 
                             $response->status(500);
                             $response->header('Content-Type', 'application/json');
-                            $response->end(json_encode(['error' => 'Failed to parse video info']));
-                            return;
+                            $response->end(json_encode([
+                                'error' => 'Failed to fetch formats',
+                                'details' => 'yt-dlp exited with code ' . $result['code'],
+                                'output' => substr($errorOutput, 0, 1000)
+                            ]));
                         }
-
-                        $formats = $data['formats'] ?? [];
-
-                        // Filter video and audio formats
-                        $videoFormats = array_filter($formats, function($f) {
-                            return isset($f['vcodec']) && $f['vcodec'] !== 'none';
-                        });
-
-                        $audioFormats = array_filter($formats, function($f) {
-                            return isset($f['acodec']) && $f['acodec'] !== 'none' &&
-                                   (!isset($f['vcodec']) || $f['vcodec'] === 'none');
-                        });
-
-                        // Mark job as completed
-                        $jobManager->updateJob($jobId, [
-                            'status' => 'completed',
-                            'progress' => 100.0,
-                            'end_time' => time()
-                        ]);
-                        $logger->info('Format fetch completed', [
-                            'job_id' => $jobId,
-                            'video_count' => count($videoFormats),
-                            'audio_count' => count($audioFormats)
-                        ]);
-
-                        $response->header('Content-Type', 'application/json');
-                        $response->end(json_encode([
-                            'video_formats' => array_values($videoFormats),
-                            'audio_formats' => array_values($audioFormats),
-                            'title' => $data['title'] ?? 'Unknown',
-                            'job_id' => $jobId
-                        ]));
-                    } else {
+                    } catch (\Throwable $e) {
+                        $errorMsg = $e->getMessage();
                         $jobManager->updateJob($jobId, [
                             'status' => 'failed',
-                            'error' => 'Failed to fetch formats: ' . ($result['output'] ?? 'Unknown error'),
+                            'error' => $errorMsg,
                             'end_time' => time()
                         ]);
-                        $logger->error('Format fetch failed', [
+                        $logger->error('Format fetch exception in coroutine', [
                             'job_id' => $jobId,
-                            'exit_code' => $result['code'],
-                            'output' => $result['output'] ?? ''
+                            'error' => $errorMsg,
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'trace' => $e->getTraceAsString()
                         ]);
 
                         $response->status(500);
                         $response->header('Content-Type', 'application/json');
                         $response->end(json_encode([
-                            'error' => 'Failed to fetch formats',
-                            'output' => $result['output'] ?? ''
+                            'error' => 'Internal server error',
+                            'details' => $errorMsg,
+                            'file' => basename($e->getFile()),
+                            'line' => $e->getLine()
                         ]));
                     }
-                } catch (\Throwable $e) {
-                    $jobManager->updateJob($jobId, [
-                        'status' => 'failed',
-                        'error' => $e->getMessage(),
-                        'end_time' => time()
-                    ]);
-                    $logger->error('Format fetch exception', [
-                        'job_id' => $jobId,
-                        'error' => $e->getMessage()
-                    ]);
+                });
+            } catch (\Throwable $e) {
+                $logger->error('Format fetch exception before coroutine', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
 
-                    $response->status(500);
-                    $response->header('Content-Type', 'application/json');
-                    $response->end(json_encode([
-                        'error' => 'Exception: ' . $e->getMessage()
-                    ]));
-                }
-            });
+                $response->status(500);
+                $response->header('Content-Type', 'application/json');
+                $response->end(json_encode([
+                    'error' => 'Failed to start format fetch',
+                    'details' => $e->getMessage()
+                ]));
+            }
             return;
         }
 
