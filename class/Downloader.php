@@ -22,6 +22,7 @@ class Downloader
     private string $outfilename = "%(title)s-%(id)s.%(ext)s";
     private string $vformat = 'mp4';
     private string $quality = '';
+    private string $container = '';
     private ?JobManager $jobManager = null;
     private ?LoggerInterface $logger = null;
 
@@ -72,6 +73,14 @@ class Downloader
     public function setQuality(string $quality): void
     {
         $this->quality = $quality;
+    }
+
+    /**
+     * Set container format preference (mp4, webm, mkv)
+     */
+    public function setContainer(string $container): void
+    {
+        $this->container = $container;
     }
 
     /**
@@ -292,14 +301,29 @@ class Downloader
             return 'bestaudio';
         }
 
-        return match($quality) {
-            '1080p' => 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
-            '720p' => 'bestvideo[height<=720]+bestaudio/best[height<=720]',
-            '480p' => 'bestvideo[height<=480]+bestaudio/best[height<=480]',
-            '360p' => 'bestvideo[height<=360]+bestaudio/best[height<=360]',
-            'worst' => 'worstvideo+worstaudio/worst',
-            default => 'bestvideo+bestaudio/best'
+        // Build container filter
+        $containerFilter = '';
+        if (!empty($this->container)) {
+            $containerFilter = '[ext=' . $this->container . ']';
+        }
+
+        // Build format string with quality and optional container
+        $formatString = match($quality) {
+            '1080p' => "bestvideo{$containerFilter}[height<=1080]+bestaudio/best{$containerFilter}[height<=1080]",
+            '720p' => "bestvideo{$containerFilter}[height<=720]+bestaudio/best{$containerFilter}[height<=720]",
+            '480p' => "bestvideo{$containerFilter}[height<=480]+bestaudio/best{$containerFilter}[height<=480]",
+            '360p' => "bestvideo{$containerFilter}[height<=360]+bestaudio/best{$containerFilter}[height<=360]",
+            'worst' => "worstvideo{$containerFilter}+worstaudio/worst{$containerFilter}",
+            default => "bestvideo{$containerFilter}+bestaudio/best{$containerFilter}"
         };
+
+        // If no container specified, use generic best format
+        if (empty($this->container)) {
+            return $formatString;
+        }
+
+        // With container, add fallback to best available in that container
+        return $formatString . "/best[ext={$this->container}]";
     }
 
     public function info(): string

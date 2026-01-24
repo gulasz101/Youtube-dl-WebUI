@@ -43,6 +43,11 @@ if (isset($postInput['urls']) && !empty($postInput['urls'])) {
         $quality = $postInput['quality'];
     }
 
+    $container = '';
+    if (isset($postInput['container']) && !empty($postInput['container'])) {
+        $container = $postInput['container'];
+    }
+
     try {
         $downloader = new Downloader($postInput['urls']);
 
@@ -52,6 +57,11 @@ if (isset($postInput['urls']) && !empty($postInput['urls'])) {
         // Set quality if provided
         if ($quality) {
             $downloader->setQuality($quality);
+        }
+
+        // Set container format if provided
+        if ($container) {
+            $downloader->setContainer($container);
         }
 
         // Download (now async)
@@ -81,7 +91,6 @@ require 'views/header.php';
     <label for="url">Video URL:
       <input id="url" name="urls" placeholder="https://youtube.com/watch?v=..." type="text" required />
     </label>
-    <button type="button" id="fetch-formats" onclick="fetchFormats()">Fetch Formats</button>
 
     <div class="grid">
       <label for="quality">Quality:
@@ -95,21 +104,23 @@ require 'views/header.php';
         </select>
       </label>
 
-      <label>
-        <input type="checkbox" id="audioCheck" name="audio" role="switch" onchange="toggleFormatType()" />
-        Audio Only
+      <label for="container">Container Format:
+        <select id="container" name="container">
+          <option value="" selected>Default (any)</option>
+          <option value="mp4">MP4</option>
+          <option value="webm">WebM</option>
+          <option value="mkv">MKV</option>
+        </select>
       </label>
 
-      <label for="outfilename">Filename (optional):
-        <input id="outfilename" name="outfilename" placeholder="%(title)s-%(id)s.%(ext)s" type="text">
+      <label>
+        <input type="checkbox" id="audioCheck" name="audio" role="switch" />
+        Audio Only
       </label>
     </div>
 
-    <label for="format-select" id="format-label" style="display:none;">
-      Specific Format (optional):
-      <select id="format-select" name="vformat">
-        <option value="">Auto (based on quality)</option>
-      </select>
+    <label for="outfilename">Filename (optional):
+      <input id="outfilename" name="outfilename" placeholder="%(title)s-%(id)s.%(ext)s" type="text">
     </label>
 
     <button type="submit">Download</button>

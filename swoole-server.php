@@ -202,7 +202,7 @@ $server->on('Request', function(Request $request, Response $response) use ($conf
 
                         $jobManager->updateJob($jobId, ['status' => 'fetching_formats', 'progress' => 50.0]);
 
-                        $cmd = escapeshellarg($config['bin']) . ' -J ' . escapeshellarg($url) . ' 2>&1';
+                        $cmd = escapeshellarg($config['bin']) . ' --no-warnings -J ' . escapeshellarg($url) . ' 2>&1';
                         $logger->info('Executing yt-dlp command', ['job_id' => $jobId, 'cmd' => $cmd]);
 
                         $result = \Swoole\Coroutine\System::exec($cmd);
