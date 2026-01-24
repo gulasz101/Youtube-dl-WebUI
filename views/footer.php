@@ -82,10 +82,20 @@
         const progress = Math.round(job.progress || 0);
         const urlPreview = job.url.substring(0, 40);
 
+        // Translate status to user-friendly message
+        const statusMap = {
+          'fetching_formats': 'Fetching available formats...',
+          'downloading': 'Downloading...',
+          'queued': 'Queued',
+          'completed': 'Completed',
+          'failed': 'Failed'
+        };
+        const statusText = statusMap[job.status] || job.status;
+
         li.innerHTML = `
           <strong>${urlPreview}${job.url.length > 40 ? '...' : ''}</strong><br>
           <progress value="${progress}" max="100"></progress> ${progress}%<br>
-          <small>${job.status}</small>
+          <small>${statusText}</small>
         `;
         jobList.appendChild(li);
       });
@@ -124,10 +134,25 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       })
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) {
+            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+          }
+          return r.text(); // Get text first for better error handling
+        })
+        .then(text => {
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('Failed to parse response:', text.substring(0, 200));
+            throw new Error('Invalid JSON response from server');
+          }
+        })
         .then(data => {
           if (data.error) {
             alert('Failed to fetch formats: ' + data.error);
+            btn.textContent = 'Fetch Formats';
+            btn.disabled = false;
             return;
           }
 
@@ -139,8 +164,13 @@
           document.getElementById('format-label').style.display = 'block';
           btn.textContent = 'Fetch Formats';
           btn.disabled = false;
+
+          // Show success message
+          const formatCount = availableFormats.video.length + availableFormats.audio.length;
+          console.log(`Loaded ${formatCount} formats (${availableFormats.video.length} video, ${availableFormats.audio.length} audio)`);
         })
         .catch(err => {
+          console.error('Format fetch error:', err);
           alert('Failed to fetch formats: ' + err.message);
           btn.textContent = 'Fetch Formats';
           btn.disabled = false;

@@ -177,45 +177,105 @@ $server->on('Request', function(Request $request, Response $response) use ($conf
                 return;
             }
 
+            // Create job for format fetching
+            $jobId = $jobManager->createJob($url, [
+                'status' => 'fetching_formats',
+                'progress' => 0.0,
+                'type' => 'format_fetch'
+            ]);
+
+            $logger->info('Format fetch job created', ['job_id' => $jobId, 'url' => $url]);
+
             // Execute yt-dlp -J in coroutine to get formats
-            go(function() use ($url, $response, $config) {
-                $cmd = escapeshellarg($config['bin']) . ' -J ' . escapeshellarg($url) . ' 2>&1';
-                $result = \Swoole\Coroutine\System::exec($cmd);
+            go(function() use ($url, $response, $config, $jobManager, $logger, $jobId) {
+                try {
+                    $jobManager->updateJob($jobId, ['status' => 'fetching_formats', 'progress' => 50.0]);
 
-                if ($result['code'] === 0) {
-                    $data = json_decode($result['output'], true);
+                    $cmd = escapeshellarg($config['bin']) . ' -J ' . escapeshellarg($url) . ' 2>&1';
+                    $result = \Swoole\Coroutine\System::exec($cmd);
 
-                    if (!$data) {
+                    if ($result['code'] === 0) {
+                        $data = json_decode($result['output'], true);
+
+                        if (!$data) {
+                            $jobManager->updateJob($jobId, [
+                                'status' => 'failed',
+                                'error' => 'Failed to parse video info',
+                                'end_time' => time()
+                            ]);
+                            $logger->error('Format fetch failed - parse error', ['job_id' => $jobId]);
+
+                            $response->status(500);
+                            $response->header('Content-Type', 'application/json');
+                            $response->end(json_encode(['error' => 'Failed to parse video info']));
+                            return;
+                        }
+
+                        $formats = $data['formats'] ?? [];
+
+                        // Filter video and audio formats
+                        $videoFormats = array_filter($formats, function($f) {
+                            return isset($f['vcodec']) && $f['vcodec'] !== 'none';
+                        });
+
+                        $audioFormats = array_filter($formats, function($f) {
+                            return isset($f['acodec']) && $f['acodec'] !== 'none' &&
+                                   (!isset($f['vcodec']) || $f['vcodec'] === 'none');
+                        });
+
+                        // Mark job as completed
+                        $jobManager->updateJob($jobId, [
+                            'status' => 'completed',
+                            'progress' => 100.0,
+                            'end_time' => time()
+                        ]);
+                        $logger->info('Format fetch completed', [
+                            'job_id' => $jobId,
+                            'video_count' => count($videoFormats),
+                            'audio_count' => count($audioFormats)
+                        ]);
+
+                        $response->header('Content-Type', 'application/json');
+                        $response->end(json_encode([
+                            'video_formats' => array_values($videoFormats),
+                            'audio_formats' => array_values($audioFormats),
+                            'title' => $data['title'] ?? 'Unknown',
+                            'job_id' => $jobId
+                        ]));
+                    } else {
+                        $jobManager->updateJob($jobId, [
+                            'status' => 'failed',
+                            'error' => 'Failed to fetch formats: ' . ($result['output'] ?? 'Unknown error'),
+                            'end_time' => time()
+                        ]);
+                        $logger->error('Format fetch failed', [
+                            'job_id' => $jobId,
+                            'exit_code' => $result['code'],
+                            'output' => $result['output'] ?? ''
+                        ]);
+
                         $response->status(500);
                         $response->header('Content-Type', 'application/json');
-                        $response->end(json_encode(['error' => 'Failed to parse video info']));
-                        return;
+                        $response->end(json_encode([
+                            'error' => 'Failed to fetch formats',
+                            'output' => $result['output'] ?? ''
+                        ]));
                     }
+                } catch (\Throwable $e) {
+                    $jobManager->updateJob($jobId, [
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                        'end_time' => time()
+                    ]);
+                    $logger->error('Format fetch exception', [
+                        'job_id' => $jobId,
+                        'error' => $e->getMessage()
+                    ]);
 
-                    $formats = $data['formats'] ?? [];
-
-                    // Filter video and audio formats
-                    $videoFormats = array_filter($formats, function($f) {
-                        return isset($f['vcodec']) && $f['vcodec'] !== 'none';
-                    });
-
-                    $audioFormats = array_filter($formats, function($f) {
-                        return isset($f['acodec']) && $f['acodec'] !== 'none' &&
-                               (!isset($f['vcodec']) || $f['vcodec'] === 'none');
-                    });
-
-                    $response->header('Content-Type', 'application/json');
-                    $response->end(json_encode([
-                        'video_formats' => array_values($videoFormats),
-                        'audio_formats' => array_values($audioFormats),
-                        'title' => $data['title'] ?? 'Unknown'
-                    ]));
-                } else {
                     $response->status(500);
                     $response->header('Content-Type', 'application/json');
                     $response->end(json_encode([
-                        'error' => 'Failed to fetch formats',
-                        'output' => $result['output'] ?? ''
+                        'error' => 'Exception: ' . $e->getMessage()
                     ]));
                 }
             });

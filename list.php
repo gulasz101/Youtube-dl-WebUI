@@ -104,7 +104,10 @@ require 'views/header.php';
   ?>
 
   <div id="video-preview" style="display:none; margin-top: 2rem;">
-    <h3>Preview</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="margin: 0;">Preview</h3>
+      <button id="close-preview" onclick="closePreview()" class="secondary">Close</button>
+    </div>
     <video id="video-player" controls style="width: 100%; max-width: 800px;">
       <source id="video-source" src="" type="video/mp4">
       Your browser does not support video playback.
@@ -116,6 +119,24 @@ require 'views/header.php';
   </div>
 
   <script>
+    // Close preview function
+    function closePreview() {
+      const previewDiv = document.getElementById('video-preview');
+      const videoPlayer = document.getElementById('video-player');
+      const audioPlayer = document.getElementById('audio-player');
+
+      // Stop playback
+      videoPlayer.pause();
+      audioPlayer.pause();
+
+      // Clear sources
+      videoPlayer.src = '';
+      audioPlayer.src = '';
+
+      // Hide preview
+      previewDiv.style.display = 'none';
+    }
+
     // Handle media file clicks for inline playback
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('a[href^="/stream/"]').forEach(link => {
